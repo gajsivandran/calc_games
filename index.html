@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calc Games</title>
+<meta name="description" content="Review games for QSCI 190, 291 and 292 at the University of Washington.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef4f2;
+  --paper:#ffffff;
+  --ink:#14302c;
+  --muted:#5b746f;
+  --accent:#2f7d5b;
+  --line:#c9ddd7;
+  --display:"Bricolage Grotesque","Segoe UI",sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55}
+.wrap{max-width:960px;margin:0 auto;padding:48px 20px 64px;display:flex;flex-direction:column;gap:40px}
+.kicker{font-family:var(--mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:clamp(2.8rem,8vw,4.8rem);font-weight:800;line-height:.95;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.lede{max-width:60ch;margin:12px 0 0;color:var(--ink)}
+section{display:flex;flex-direction:column;gap:14px}
+.course{display:flex;align-items:baseline;gap:14px;border-bottom:2px solid var(--ink);padding-bottom:8px}
+.course h2{font-size:2rem;font-weight:800}
+.course p{margin:0;color:var(--muted);font-size:.95rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+a.card{display:flex;flex-direction:column;gap:6px;background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:16px 18px;color:inherit;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
+a.card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,48,44,.12)}
+a.card:focus-visible{outline:3px solid #f2b632;outline-offset:3px}
+.card h3{font-size:1.35rem;font-weight:800}
+.card p{margin:0;font-size:.95rem}
+.card .meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.card .go{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--accent);margin-top:4px}
+.soon{background:transparent;border:1.5px dashed var(--line);border-radius:10px;padding:16px 18px;color:var(--muted);font-size:.95rem}
+footer{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){a.card{transition:none}a.card:hover{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">University of Washington · College of the Environment</div>
+    <h1>Calc <span>Games</span></h1>
+    <p class="lede">Team review games for quantitative science courses. Each one runs in the browser, needs no login, and works best with one laptop per group.</p>
+  </header>
+
+  <section aria-labelledby="c190">
+    <div class="course"><h2 id="c190">QSCI 190</h2><p>Precalculus for Environmental Science</p></div>
+    <div class="cards">
+      <a class="card" href="games/rewild-kestrel-island.html">
+        <span class="meta">Test 3 review</span>
+        <h3>Rewild Kestrel Island</h3>
+        <p>Restore an island in eight stages: exponential models, half-life, logarithms, pH, rational functions and arc length.</p>
+        <span class="go">Play →</span>
+      </a>
+    </div>
+  </section>
+
+  <section aria-labelledby="c291">
+    <div class="course"><h2 id="c291">QSCI 291</h2><p>Environmental Calculus</p></div>
+    <div class="cards">
+      <a class="card" href="games/station-291-outbreak.html">
+        <span class="meta">Test 3 review</span>
+        <h3>Station 291 Outbreak</h3>
+        <p>Five scientists, five theories, one outbreak. Sign charts, concavity, rational functions and a hand-drawn curve sketch.</p>
+        <span class="go">Play →</span>
+      </a>
+    </div>
+  </section>
+
+  <section aria-labelledby="c292">
+    <div class="course"><h2 id="c292">QSCI 292</h2><p>Environmental Calculus 2</p></div>
+    <div class="soon">Games coming soon.</div>
+  </section>
+
+  <footer>Progress in each game is saved in your browser on this device only. Use the game's reset button between groups.</footer>
+</div>
+</body>
+</html>

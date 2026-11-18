@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Station 291 Outbreak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: instrument-panel header, grid of five locked cabinets, then the door. Single dark theme by choice. */
+  --night:#0e1a1f;
+  --panel:#15262c;
+  --rule:#2b434a;
+  --ink:#e6efe9;
+  --dim:#93abaa;
+  --signal:#f2a541;
+  --ok:#5fd3a0;
+  --bad:#ff7a6b;
+  --display:"Big Shoulders Stencil Display", "Impact", sans-serif;
+  --body:"IBM Plex Sans", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--night);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  background-image:radial-gradient(circle at 1px 1px, rgba(147,171,170,.08) 1px, transparent 0);background-size:22px 22px}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 64px;display:flex;flex-direction:column;gap:24px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.02em}
+h1{font-size:clamp(2.6rem,7vw,4.6rem);line-height:.95;font-weight:800;text-transform:uppercase}
+h1 span{color:var(--signal)}
+.kicker{font-family:var(--mono);font-size:.8rem;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.lede{max-width:62ch;color:var(--ink);margin:0}
+header{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end}
+@media (max-width:760px){header{grid-template-columns:1fr}}
+.readouts{display:grid;grid-template-columns:repeat(4,auto);gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.ro{background:var(--panel);padding:10px 16px;min-width:96px}
+.ro b{display:block;font-family:var(--mono);font-size:1.5rem;font-variant-numeric:tabular-nums;font-weight:600}
+.ro small{font-family:var(--mono);font-size:.68rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+#codeword b{color:var(--signal);letter-spacing:.25em}
+@media (max-width:480px){.readouts{grid-template-columns:repeat(2,1fr)}}
+
+.startbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:14px 16px}
+.startbar label{font-family:var(--mono);font-size:.8rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+input[type=text]{font-family:var(--mono);font-size:1rem;background:var(--night);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:8px 10px;min-width:0}
+input[type=text]:focus-visible,button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+button{font-family:var(--mono);font-size:.88rem;font-weight:600;cursor:pointer;border-radius:4px;border:1px solid var(--rule);background:var(--night);color:var(--ink);padding:8px 14px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.primary{background:var(--signal);color:#1a1205;border-color:var(--signal)}
+.ghost{background:transparent;color:var(--dim)}
+.status{font-family:var(--mono);font-size:.85rem;color:var(--dim)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
+@media (max-width:400px){.grid{grid-template-columns:1fr}}
+.cab{background:var(--panel);border:1px solid var(--rule);border-radius:6px;display:flex;flex-direction:column;overflow:hidden}
+.cab.sealed{opacity:.55}
+.cab.sealed .stripe{background:repeating-linear-gradient(-45deg,var(--rule) 0 10px,var(--night) 10px 20px)}
+.sealmsg{font-family:var(--mono);font-size:.85rem;color:var(--dim);border:1px dashed var(--rule);border-radius:4px;padding:18px 12px;text-align:center}
+.cab .stripe{height:10px;background:repeating-linear-gradient(-45deg,var(--signal) 0 10px,#1a1205 10px 20px)}
+.cab.open .stripe{background:var(--ok)}
+.cab-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px 0}
+.cab-head h2{font-size:1.7rem;font-weight:800;text-transform:uppercase;line-height:1}
+.pill{font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.1em;padding:3px 8px;border-radius:999px;border:1px solid var(--signal);color:var(--signal);white-space:nowrap}
+.open .pill{border-color:var(--ok);color:var(--ok)}
+.cab-body{padding:8px 16px 16px;display:flex;flex-direction:column;gap:12px;flex:1}
+.skill{font-family:var(--mono);font-size:.75rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.prob{margin:0}
+.fn{font-family:var(--mono);background:var(--night);border-left:3px solid var(--signal);padding:8px 12px;border-radius:0 4px 4px 0;font-size:1rem;overflow-x:auto;white-space:nowrap}
+.fields{display:flex;flex-direction:column;gap:8px}
+.field{display:grid;grid-template-columns:1fr 132px;gap:10px;align-items:center}
+.field label,.field .lbl{font-size:.92rem}
+.field input{width:100%;text-align:right;font-variant-numeric:tabular-nums}
+.field.right input,.field.right .tog{border-color:var(--ok)}
+.field.wrong input,.field.wrong .tog{border-color:var(--bad)}
+.tog{display:flex;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.tog button{flex:1;white-space:nowrap;font-size:1rem;border:0;border-radius:0;padding:7px 4px;background:var(--night);color:var(--dim)}
+.tog button[aria-pressed=true]{background:var(--signal);color:#1a1205}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:auto}
+.msg{font-family:var(--mono);font-size:.82rem;min-height:1.2em}
+.msg.bad{color:var(--bad)} .msg.ok{color:var(--ok)}
+.hint{background:rgba(242,165,65,.08);border:1px dashed var(--signal);border-radius:4px;padding:8px 12px;font-size:.92rem}
+.sol{background:rgba(95,211,160,.07);border:1px solid var(--ok);border-radius:4px;padding:10px 12px;font-size:.92rem}
+.sol h3{font-size:1.15rem;color:var(--ok);margin-bottom:4px}
+.sol p{margin:.35em 0}
+.frag{font-family:var(--display);font-size:2.4rem;color:var(--signal);line-height:1}
+sup{font-size:.7em}
+
+.boardrow{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start}
+@media (max-width:860px){.boardrow{grid-template-columns:1fr}}
+.face{width:64px;height:104px;flex:none}
+.th{position:relative;padding-left:84px!important;min-height:124px}
+.th .face{position:absolute;left:10px;top:10px}
+.who-row{display:flex;align-items:center;gap:10px}
+.cab-head .face{width:54px;height:88px}
+.board{display:flex;flex-direction:column;gap:10px}
+.mapbox{display:flex;flex-direction:column;gap:10px}
+.mapbox svg{width:100%;height:auto;background:var(--panel);border:1px solid var(--rule);border-radius:6px;display:block}
+#mapPct{color:var(--bad);font-weight:600}
+.ro.low b{color:var(--signal)} .ro.over b{color:var(--bad)}
+.dispatch{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);max-width:min(560px,calc(100% - 32px));background:var(--panel);border:1px solid var(--signal);border-left:6px solid var(--signal);border-radius:6px;padding:12px 16px;font-size:.95rem;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:5;display:none}
+.dispatch.show{display:block}
+.dispatch b{font-family:var(--mono);font-size:.75rem;letter-spacing:.1em;color:var(--signal);display:block;text-transform:uppercase}
+.notes{background:var(--night);border:1px dashed var(--dim);border-radius:4px;padding:10px 12px;font-family:var(--mono);font-size:.85rem;margin:0;padding-left:2.4em}
+.notes li{margin:3px 0}
+.dsp{border-left:3px solid var(--signal);padding:4px 10px;font-size:.92rem}
+.theories{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.th{background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--dim);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.th .who{font-family:var(--display);font-size:1.25rem;font-weight:800;text-transform:uppercase;line-height:1}
+.th .claim{font-size:.88rem;color:var(--dim)}
+.chip{align-self:flex-start;font-family:var(--mono);font-size:.68rem;font-weight:600;letter-spacing:.1em;padding:2px 7px;border-radius:999px;border:1px solid var(--dim);color:var(--dim)}
+.th.supported{border-left-color:var(--ok)} .th.supported .chip{border-color:var(--ok);color:var(--ok)}
+.th.ruledout{border-left-color:var(--bad)} .th.ruledout .chip{border-color:var(--bad);color:var(--bad)}
+.th.partial{border-left-color:var(--signal)} .th.partial .chip{border-color:var(--signal);color:var(--signal)}
+.verdict{font-family:var(--mono);font-size:.82rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;border-radius:4px;border:1px solid}
+.verdict.supported{color:var(--ok);border-color:var(--ok)} .verdict.ruledout{color:var(--bad);border-color:var(--bad)} .verdict.partial{color:var(--signal);border-color:var(--signal)}
+.tasks{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px;max-width:70ch}
+.signoff{border:1px solid var(--signal);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:rgba(242,165,65,.06)}
+.door{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.door.locked{opacity:.6}
+.door h2{font-size:2.2rem;font-weight:800;text-transform:uppercase}
+.plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.plot{background:var(--night);border:1px solid var(--rule);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px;color:var(--ink);text-align:left;font-family:var(--body);font-weight:400}
+.plot:hover:not(:disabled){border-color:var(--signal)}
+.plot svg{width:100%;height:auto;display:block}
+.plot .tag{font-family:var(--display);font-size:1.4rem;font-weight:800}
+.plot.picked-bad{border-color:var(--bad)}
+.plot.picked-ok{border-color:var(--ok)}
+
+.escape{position:fixed;inset:0;background:rgba(8,15,18,.92);display:none;align-items:center;justify-content:center;padding:20px;z-index:10}
+.escape.show{display:flex}
+.escape .card{max-width:560px;background:var(--panel);border:2px solid var(--ok);border-radius:8px;padding:28px;display:flex;flex-direction:column;gap:12px}
+.escape h2{font-size:3rem;color:var(--ok);text-transform:uppercase;line-height:1}
+.big{font-family:var(--mono);font-size:2.2rem;font-weight:600;font-variant-numeric:tabular-nums}
+.foot{font-size:.82rem;color:var(--dim);max-width:70ch}
+@media (prefers-reduced-motion:no-preference){
+  .cab.just-opened .stripe{animation:flash .9s ease-out 2}
+  @keyframes flash{50%{filter:brightness(1.8)}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">QSCI 291 · Test 3 review · group play</div>
+      <h1>Station 291 <span>Outbreak</span></h1>
+      <p class="lede">Wildlife along the valley is falling sick, and the field station has gone into biosecurity lockdown. Your team of five specialists disagrees about the source, loudly. Each cabinet holds one specialist's evidence, and its calculus decides whether that theory survives. Open all five to rebuild the override code, then confirm the culprit at the door.</p>
+      <p class="lede" style="color:var(--dim);font-size:.92rem;margin-top:8px">Each person on your team plays one specialist. When your cabinet is up, you enter the answers, and the rest of the team checks your work.</p>
+    </div>
+    <div class="readouts" aria-live="polite">
+      <div class="ro" id="clockBox"><small>Time left</small><b id="clock">30:00</b></div>
+      <div class="ro"><small>Hints (−2 min)</small><b id="hintCount">0</b></div>
+      <div class="ro"><small>Wrong tries</small><b id="wrongCount">0</b></div>
+      <div class="ro" id="codeword"><small>Override</small><b id="code">_____</b></div>
+    </div>
+  </header>
+
+  <div class="boardrow">
+  <section class="board" aria-label="Case board">
+    <div class="kicker">Case board · competing hypotheses</div>
+    <div class="theories" id="board"></div>
+  </section>
+  <section class="mapbox" aria-label="Outbreak map">
+    <div class="kicker">Valley outbreak map · <span id="mapPct">0%</span> of sites infected</div>
+    <svg id="map" viewBox="0 0 300 200" role="img" aria-label="Map of the valley showing infected monitoring sites"></svg>
+  </section>
+  </div>
+  <div class="dispatch" id="dispatch" role="status" aria-live="polite"></div>
+
+  <div class="startbar">
+    <label for="team">Team name</label>
+    <input type="text" id="team" placeholder="e.g. Team Mycelium" maxlength="40">
+    <button class="primary" id="startBtn">Start the clock</button>
+    <span class="status" id="startStatus">The cabinets stay locked until your team starts.</span>
+    <button class="ghost" id="resetBtn" style="margin-left:auto">Reset for a new team</button>
+  </div>
+
+  <section class="grid" id="grid" aria-label="Evidence cabinets"></section>
+
+  <section class="door locked" id="door" aria-label="Station door">
+    <div class="kicker">Final lock · paper and pencil</div>
+    <h2>The Door · Sign-off</h2>
+    <div id="doorBody"></div>
+    <div class="msg" id="doorMsg" aria-live="polite"></div>
+  </section>
+
+  <p class="foot">Answers are checked to within 0.01. Fractions like 5/6 are fine. You have 30 minutes. Each hint costs two. If time runs out, keep going: the clock just goes negative. Progress is kept on this device if the page reloads.</p>
+</div>
+
+<div class="escape" id="escape" role="dialog" aria-modal="true" aria-labelledby="escTitle">
+  <div class="card">
+    <div class="kicker">Override accepted · code SPORE</div>
+    <h2 id="escTitle">Case closed</h2>
+    <p style="margin:0">Glacier melt is releasing dormant fungal spores, and animals are carrying them down the valley. The deep sea is cleared. The aliens are cleared too, sorry.</p>
+    <div id="escTeam" class="status"></div>
+    <div class="big" id="escTime">00:00</div>
+    <div class="status" id="escDetail"></div>
+    <p class="foot" style="color:var(--ink)">Show this screen to your instructor. Then go back over any cabinet where you needed a hint: those are your Test 3 study targets.</p>
+    <button id="escClose">Back to the station</button>
+  </div>
+</div>
+
+<script>
+const LOCKS = [
+ {id:"L1", name:"The Ecologist", title:"Fungal theory", skill:"First-derivative sign chart", frag:"S",
+  claim:"A fungal pathogen is spreading through soil and leaf litter.",
+  dispatch:"The lab cultured spores from leaf litter. They match nothing in the regional fungal database.",
+  verdict:"supported", vlabel:"Supported: fungal signature confirmed",
+  vtext:"A flat pause, then a single sharp minimum, matches the bloom-and-crash pattern of a fungal spore release. The Ecologist is on to something.",
+  prob:`The Ecologist's spore sensor turns its readings into a signal. She claims a fungal bloom leaves a fingerprint: a flat point that is <em>not</em> a turning point, followed by exactly one minimum. Test her claim:`,
+  fn:`f(x) = x<sup>4</sup> − 4x<sup>3</sup>`,
+  fields:[
+   {label:"Smaller critical number", type:"num", ans:0},
+   {label:"Larger critical number", type:"num", ans:3},
+   {label:"Sign of f′ on the left interval", type:"sign", ans:"-"},
+   {label:"Sign of f′ on the middle interval", type:"sign", ans:"-"},
+   {label:"Sign of f′ on the right interval", type:"sign", ans:"+"},
+   {label:"x-value of the local minimum", type:"num", ans:3},
+   {label:"Number of local maxima", type:"num", ans:0}],
+  hints:["Factor f′(x) completely. Pull out the biggest common factor first.",
+         "A squared factor like x² is never negative. Does f′ actually change sign at x = 0?"],
+  sol:`<p>f′(x) = 4x³ − 12x² = 4x²(x − 3). Critical numbers: x = 0 and x = 3.</p>
+       <p>Because 4x² ≥ 0, the sign of f′ matches the sign of (x − 3): negative, negative, positive.</p>
+       <p>f′ does not change sign at x = 0, so x = 0 is a critical point but <em>not</em> an extremum. The only local extremum is a minimum at x = 3, where f(3) = −27. There are no local maxima.</p>`},
+ {id:"L2", name:"The Marine Biologist", title:"Deep-sea theory", skill:"Rational function + sign chart · applied", frag:"P",
+  claim:"Something came up from the deep ocean with an upwelling event.",
+  dispatch:"Beach surveys came back clean. Whatever this is, it is moving down the valley toward the coast, not up from it.",
+  verdict:"ruledout", vlabel:"Ruled out: the pulse dies away",
+  vtext:"The deep-water signal is a single pulse that decays to zero. A one-off pulse can't feed an outbreak that is still growing weeks later. The deep sea is cleared.",
+  prob:`An upwelling event pushed deep, nutrient-rich water onto the coast. A buoy at the river mouth tracks a deep-water nitrate marker above normal levels, t days after the event (t ≥ 0). If the deep sea is the source, the marker should stay high:`,
+  fn:`C(t) = 20t / (t<sup>2</sup> + 4)   (µmol/L)`,
+  fields:[
+   {label:"Sign of C′ on the first interval (after t = 0)", type:"sign", ans:"+"},
+   {label:"Sign of C′ on the second interval", type:"sign", ans:"-"},
+   {label:"Time of peak marker level (days)", type:"num", ans:2},
+   {label:"Peak marker level (µmol/L)", type:"num", ans:5},
+   {label:"Long-run level as t → ∞ (µmol/L)", type:"num", ans:0}],
+  hints:["Use the quotient rule. The denominator of C′ is squared, so only the numerator decides the sign.",
+         "Long run means the horizontal asymptote. Compare the degrees of the top and bottom."],
+  sol:`<p>C′(t) = [20(t² + 4) − 20t(2t)] / (t² + 4)² = 20(4 − t²) / (t² + 4)².</p>
+       <p>For t ≥ 0 the sign comes from (4 − t²): positive on (0, 2), negative after. The marker peaks on day 2 at C(2) = 40/8 = 5 µmol/L.</p>
+       <p>The numerator has lower degree than the denominator, so C → 0. The deep water mixes out and the coast returns to normal.</p>`},
+ {id:"L3", name:"The Wildlife Biologist", title:"Animal theory", skill:"Rational functions · find the error", frag:"O",
+  claim:"Animals are both the source and the vector.",
+  dispatch:"Swab results are in. Frogs and ravens downstream test positive. The same species in the next valley over test clean.",
+  verdict:"partial", vlabel:"Partly right: vector yes, source no",
+  vtext:"Once the notes are fixed, the infection ratio levels off at 1: each infected animal passes the pathogen on about one for one. Animals spread it efficiently. But a ratio only describes spread from animals that are already infected, so they are the carriers, not the origin.",
+  prob:`The Wildlife Biologist rushed her transmission model to the press office. R(x) compares new infections to existing ones as contact rate x rises. Her notes are below, and at least one line is wrong. Find the first bad line, then give the correct values:`,
+  fn:`R(x) = (x<sup>2</sup> − x − 6) / (x<sup>2</sup> − 9)`,
+  notes:`<ol class="notes">
+    <li>Factor: R(x) = (x − 3)(x + 2) / [(x − 3)(x + 3)]</li>
+    <li>Cancel (x − 3): R(x) = (x + 2)/(x + 3), so there is a hole at x = 3.</li>
+    <li>Cancelling removed the zero in the denominator, so R has no vertical asymptote.</li>
+    <li>Horizontal asymptote: y = −6/−9 = 2/3.</li>
+    <li>Hole height: (3 + 2)/(3 + 3) = 5/6.</li></ol>`,
+  fields:[
+   {label:"Number of the first incorrect line", type:"num", ans:3},
+   {label:"Correct vertical asymptote: x =", type:"num", ans:-3},
+   {label:"Correct horizontal asymptote: y =", type:"num", ans:1},
+   {label:"Hole: y-coordinate", type:"num", ans:5/6}],
+  hints:["Cancelling (x − 3) removes only that factor. Look at what is still in the denominator.",
+         "For a horizontal asymptote, compare leading terms, not constant terms. The x² terms dominate as x grows."],
+  sol:`<p>Lines 1, 2 and 5 are right. Line 3 is the first error: after cancelling, (x + 3) is still in the denominator, so x = −3 is a vertical asymptote. It sits at a negative contact rate, outside anything physical, but it is still there.</p>
+       <p>Line 4 is also wrong. −6/−9 is the ratio of the constant terms. With equal degrees, use the leading coefficients: y = 1/1 = 1.</p>
+       <p>Correct summary: hole at (3, 5/6), vertical asymptote x = −3, horizontal asymptote y = 1.</p>`},
+ {id:"L4", name:"The Hydrologist", title:"Glacier theory", skill:"Critical points · applied", frag:"R",
+  claim:"A melting glacier has released something that was frozen for centuries.",
+  dispatch:"The ice-core team found the same spores locked inside old glacier ice.",
+  verdict:"supported", vlabel:"Supported: a daily warm pulse",
+  vtext:"Every afternoon the meltwater warms to 4 °C, warm enough to wake dormant spores, then cools overnight. The glacier is releasing something on a daily cycle.",
+  prob:`A logger sits in the meltwater stream at the foot of the retreating glacier. Dormant spores revive only near 4 °C. For t hours after midnight (0 ≤ t ≤ 24), the water temperature is:`,
+  fn:`T(t) = 4 − t<sup>3</sup>/300 + 0.12t<sup>2</sup> − 1.08t   (°C)`,
+  fields:[
+   {label:"Time of the local minimum (hours)", type:"num", ans:6},
+   {label:"Time of the local maximum (hours)", type:"num", ans:18},
+   {label:"Temperature at the local maximum (°C)", type:"num", ans:4}],
+  hints:["Find T′(t), then multiply it by −100 before you factor. The numbers get much friendlier.",
+         "Build a sign chart for T′ on [0, 24]. Where T′ goes from − to +, you have a minimum."],
+  sol:`<p>T′(t) = −t²/100 + 0.24t − 1.08 = −(1/100)(t − 6)(t − 18).</p>
+       <p>Sign of T′: negative on (0, 6), positive on (6, 18), negative on (18, 24).</p>
+       <p>So the stream is coldest at t = 6 (6 a.m., T ≈ 1.12 °C) and warmest at t = 18 (6 p.m.), where T(18) = 4 − 19.44 + 38.88 − 19.44 = 4 °C.</p>`},
+ {id:"L5", name:"The Astrobiologist", title:"Alien theory", skill:"Concavity & inflection", frag:"E",
+  claim:"It's aliens. The signal bends in ways no Earth organism could.",
+  dispatch:"NASA has replied. They would like the station to stop emailing them.",
+  verdict:"ruledout", vlabel:"Ruled out: ordinary polynomial",
+  vtext:"Those 'impossible' bends are two inflection points, exactly what any quartic with a repeated root does. Nothing extraterrestrial here. The Astrobiologist has been asked to stop emailing NASA.",
+  prob:`The Astrobiologist says the same spore-sensor signal changes its bend in a way no Earth process could produce. Check the curvature for yourself:`,
+  fn:`f(x) = x<sup>4</sup> − 4x<sup>3</sup>`,
+  fields:[
+   {label:"Smaller inflection x-value", type:"num", ans:0},
+   {label:"Larger inflection x-value", type:"num", ans:2},
+   {label:"Concavity on the left interval", type:"conc", ans:"up"},
+   {label:"Concavity on the middle interval", type:"conc", ans:"down"},
+   {label:"Concavity on the right interval", type:"conc", ans:"up"},
+   {label:"y-value at the larger inflection point", type:"num", ans:-16}],
+  hints:["f″(x) = 0 only gives candidates. Check that f″ actually changes sign there.",
+         "Yes, a point can be a critical point and an inflection point at the same time."],
+  sol:`<p>f″(x) = 12x² − 24x = 12x(x − 2). Sign of f″: positive on (−∞, 0), negative on (0, 2), positive on (2, ∞).</p>
+       <p>f″ changes sign at both x = 0 and x = 2, so both are inflection points: (0, 0) and (2, f(2)) = (2, 16 − 32) = (2, −16).</p>
+       <p>Notice x = 0 is a flat inflection point: f′(0) = 0 and the concavity flips there.</p>`}
+];
+
+
+// Original full-body cartoon scientists. mood: idle | supported | ruledout | partial
+const LOOKS={
+ L1:{skin:"#8d5a3c", hair:"#1f1410", acc:"bun",     top:"#3f8f5a", under:"#e6efe9", legs:"#5a4a3a", feet:"#3b2a1d", prop:"lens"},
+ L2:{skin:"#f1c8a5", hair:"#2c3e57", acc:"mask",    top:"#1f3550", under:"#1f3550", legs:"#1f3550", feet:"#f2a541", prop:"fish", stripe:"#4f8fa3", flippers:true},
+ L3:{skin:"#c68a5e", hair:"#5a3a22", acc:"hat",     top:"#cdb27a", under:"#cdb27a", legs:"#8a7650", feet:"#5a3a22", prop:"none", binos:true, shorts:true},
+ L4:{skin:"#e3b087", hair:"#7a4a2a", acc:"rain",    top:"#f2c94c", under:"#f2c94c", legs:"#3a4a55", feet:"#2a6f8f", prop:"bottle", coat:true},
+ L5:{skin:"#b07a55", hair:"#3b2b4f", acc:"antenna", top:"#e6efe9", under:"#7a5fb0", legs:"#2b2b3a", feet:"#111", prop:"ufo", coat:true}
+};
+function head(k, mood){
+  const ink="#1a1205";
+  const mouth={
+    idle:`<path d="M26 44 Q32 48 38 44" stroke="${ink}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+    supported:`<path d="M24 41 Q32 52 40 41 Z" fill="${ink}"/><path d="M27 42 Q32 45 37 42" fill="#fff"/>`,
+    ruledout:`<path d="M26 47 Q32 42 38 47" stroke="${ink}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+    partial:`<path d="M26 45 L38 43" stroke="${ink}" stroke-width="2.2" stroke-linecap="round"/>`}[mood];
+  const eyes = mood==="ruledout"
+    ? `<path d="M22 33 L28 33 M36 33 L42 33" stroke="${ink}" stroke-width="2.2" stroke-linecap="round"/>`
+    : `<circle cx="25" cy="33" r="2.6" fill="${ink}"/><circle cx="39" cy="33" r="2.6" fill="${ink}"/><circle cx="25.8" cy="32.2" r=".8" fill="#fff"/><circle cx="39.8" cy="32.2" r=".8" fill="#fff"/>`;
+  const sweat = mood==="ruledout" ? `<path d="M48 24 Q51 30 48 32 Q45 30 48 24 Z" fill="#7fc8e8"/>` : "";
+  const cheeks = `<circle cx="20" cy="40" r="3" fill="#ff7a6b" opacity=".35"/><circle cx="44" cy="40" r="3" fill="#ff7a6b" opacity=".35"/>`;
+  let back="", front="";
+  if(k.acc==="bun"){ back=`<circle cx="32" cy="13" r="7.5" fill="${k.hair}"/><path d="M27 6 L38 16" stroke="#f2c94c" stroke-width="2.2" stroke-linecap="round"/><path d="M37 15 L39 17" stroke="#ff7a6b" stroke-width="2.2" stroke-linecap="round"/>`; }
+  if(k.acc==="mask"){ front=`<path d="M13 23 L51 23" stroke="#2a6f8f" stroke-width="3"/><rect x="20" y="16" width="24" height="11" rx="5" fill="#9fd8ec" stroke="#2a6f8f" stroke-width="2.5"/><path d="M50 23 Q57 24 56 40" stroke="#f2a541" stroke-width="3" fill="none" stroke-linecap="round"/>`; }
+  if(k.acc==="hat"){ front=`<ellipse cx="32" cy="22" rx="24" ry="5" fill="#b89a5e"/><path d="M19 22 Q20 8 32 8 Q44 8 45 22 Z" fill="#cdb27a"/><rect x="19" y="18" width="26" height="3" fill="#6b5232"/>`; }
+  if(k.acc==="rain"){ front=`<path d="M12 26 Q32 30 52 26 L48 20 Q44 8 32 8 Q20 8 16 20 Z" fill="#f2c94c"/><path d="M12 26 Q32 30 52 26" stroke="#c99a1e" stroke-width="2" fill="none"/>`; }
+  if(k.acc==="antenna"){ front=`<path d="M16 22 Q32 12 48 22" stroke="#93abaa" stroke-width="2.5" fill="none"/><path d="M22 17 L16 5 M42 17 L48 5" stroke="#93abaa" stroke-width="2"/><circle cx="16" cy="5" r="3.2" fill="#5fd3a0"/><circle cx="48" cy="5" r="3.2" fill="#ff7a6b"/><circle cx="25" cy="33" r="6" fill="none" stroke="${ink}" stroke-width="1.6"/><circle cx="39" cy="33" r="6" fill="none" stroke="${ink}" stroke-width="1.6"/><path d="M31 33 L33 33" stroke="${ink}" stroke-width="1.6"/>`; }
+  return `${back}<path d="M14 30 Q14 14 32 14 Q50 14 50 30 L50 26 Q44 20 32 20 Q20 20 14 26 Z" fill="${k.hair}"/>
+    <circle cx="32" cy="35" r="18" fill="${k.skin}"/>
+    <path d="M14 32 Q16 18 32 18 Q48 18 50 32 Q44 24 32 24 Q20 24 14 32 Z" fill="${k.hair}"/>
+    ${cheeks}${eyes}${mouth}${sweat}${front}`;
+}
+function prop(kind,x,y){
+  if(kind==="lens") return `<line x1="${x}" y1="${y}" x2="${x+7}" y2="${y-9}" stroke="#6b5232" stroke-width="3" stroke-linecap="round"/><circle cx="${x+10}" cy="${y-13}" r="6" fill="#9fd8ec" fill-opacity=".5" stroke="#93abaa" stroke-width="2.2"/>`;
+  if(kind==="fish") return `<path d="M${x-2} ${y-6} q9 -6 16 0 q-7 6 -16 0 z" fill="#f2a541"/><path d="M${x+14} ${y-6} l6 -5 v10 z" fill="#f2a541"/><circle cx="${x+2}" cy="${y-7}" r="1" fill="#1a1205"/>`;
+  if(kind==="bottle") return `<rect x="${x-3}" y="${y-16}" width="8" height="14" rx="2" fill="#9fd8ec" stroke="#4f8fa3" stroke-width="1.5"/><rect x="${x-1}" y="${y-19}" width="4" height="4" fill="#4f8fa3"/><rect x="${x-3}" y="${y-9}" width="8" height="6" fill="#4f8fa3" opacity=".6"/>`;
+  if(kind==="ufo") return `<ellipse cx="${x+4}" cy="${y-8}" rx="11" ry="3.5" fill="#93abaa"/><path d="M${x-2} ${y-9} q6 -9 12 0 z" fill="#9fd8ec"/><circle cx="${x-3}" cy="${y-7}" r="1" fill="#f2a541"/><circle cx="${x+4}" cy="${y-6}" r="1" fill="#f2a541"/><circle cx="${x+11}" cy="${y-7}" r="1" fill="#f2a541"/>`;
+  return "";
+}
+function face(id, mood){
+  const k=LOOKS[id];
+  // arm end points: [leftHand, rightHand]
+  const poses={idle:[[20,92],[66,86]], supported:[[12,36],[68,36]], ruledout:[[27,98],[53,98]], partial:[[20,92],[70,58]]};
+  const [[lx,ly],[rx,ry]]=poses[mood];
+  const sl=[29,62], sr=[51,62];
+  const arm=(sx,sy,hx,hy,col)=>`<path d="M${sx} ${sy} L${hx} ${hy}" stroke="${col}" stroke-width="7" stroke-linecap="round"/><circle cx="${hx}" cy="${hy}" r="4" fill="${k.skin}"/>`;
+  const sleeve = k.coat ? k.top : (k.acc==="mask" ? k.top : k.under);
+  const legsH = k.shorts ? `<rect x="30" y="98" width="9" height="12" rx="2" fill="${k.legs}"/><rect x="41" y="98" width="9" height="12" rx="2" fill="${k.legs}"/><rect x="31" y="110" width="7" height="12" fill="${k.skin}"/><rect x="42" y="110" width="7" height="12" fill="${k.skin}"/>`
+                         : `<rect x="30" y="98" width="9" height="24" rx="2" fill="${k.legs}"/><rect x="41" y="98" width="9" height="24" rx="2" fill="${k.legs}"/>`;
+  const feet = k.flippers ? `<path d="M22 126 L39 120 L39 126 Z" fill="${k.feet}"/><path d="M58 126 L41 120 L41 126 Z" fill="${k.feet}"/>`
+                          : `<rect x="27" y="120" width="13" height="6" rx="3" fill="${k.feet}"/><rect x="40" y="120" width="13" height="6" rx="3" fill="${k.feet}"/>`;
+  let torso;
+  if(k.coat){ torso=`<rect x="31" y="56" width="18" height="40" fill="${k.under}"/><path d="M26 58 Q40 52 54 58 L57 108 L44 108 L40 66 L36 108 L23 108 Z" fill="${k.top}"/>`
+               + (k.acc==="rain" ? `<circle cx="38" cy="74" r="1.4" fill="#c99a1e"/><circle cx="38" cy="86" r="1.4" fill="#c99a1e"/>` : `<rect x="44" y="70" width="6" height="7" rx="1" fill="#93abaa"/>`); }
+  else if(k.acc==="bun"){ torso=`<rect x="27" y="56" width="26" height="44" rx="6" fill="${k.under}"/><path d="M27 60 L35 58 L35 98 L27 98 Z M53 60 L45 58 L45 98 L53 98 Z" fill="${k.top}"/><rect x="28" y="78" width="6" height="6" fill="#2f6b45"/><rect x="46" y="78" width="6" height="6" fill="#2f6b45"/>`; }
+  else { torso=`<rect x="27" y="56" width="26" height="44" rx="6" fill="${k.top}"/>` + (k.stripe?`<rect x="27" y="68" width="26" height="4" fill="${k.stripe}"/>`:"") + (k.acc==="hat"?`<path d="M34 57 L40 64 L46 57" stroke="#8a7650" stroke-width="2" fill="none"/><rect x="36" y="58" width="2" height="1" fill="none"/>`:""); }
+  const binos = k.binos ? `<path d="M32 57 Q40 72 48 57" stroke="#1a1205" stroke-width="1.2" fill="none"/><rect x="33" y="70" width="6" height="8" rx="2" fill="#1a1205"/><rect x="41" y="70" width="6" height="8" rx="2" fill="#1a1205"/><rect x="38" y="72" width="4" height="3" fill="#1a1205"/>` : "";
+  const sparkle = mood==="supported" ? `<path d="M70 14 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 z" fill="#f2a541"/><path d="M8 20 l1 3 3 1 -3 1 -1 3 -1 -3 -3 -1 3 -1 z" fill="#5fd3a0"/>` : "";
+  return `<svg class="face" viewBox="0 0 80 130" aria-hidden="true">
+    ${legsH}${feet}
+    ${arm(sl[0],sl[1],lx,ly,sleeve)}
+    ${torso}${binos}
+    <rect x="36" y="50" width="8" height="8" fill="${k.skin}"/>
+    <g transform="translate(8,0)">${head(k,mood)}</g>
+    ${arm(sr[0],sr[1],rx,ry,sleeve)}
+    ${prop(k.prop,rx,ry)}${sparkle}</svg>`;
+}
+function moodOf(L){ return S.open[L.id] ? L.verdict : "idle"; }
+function renderBoard(){
+  $("board").innerHTML = LOCKS.map(L=>{
+    const open=!!S.open[L.id], cls=open?L.verdict:"";
+    const chip=open?({supported:"SUPPORTED",ruledout:"RULED OUT",partial:"PARTLY RIGHT"})[L.verdict]:"UNTESTED";
+    return `<div class="th ${cls}">${face(L.id, moodOf(L))}<span class="who">${L.name.replace("The ","")}</span><span class="claim">${L.claim}</span><span class="chip">${chip}</span></div>`;
+  }).join("");
+}
+
+const SIGNOFF_HASH = 3058307108;
+function djb2(t){let x=5381;for(const ch of t)x=((x<<5)+x+ch.charCodeAt(0))>>>0;return x;}
+
+const KEY = "station291-outbreak-v2";
+const PENALTY = 120;
+let S = fresh();
+function fresh(){return {team:"", startAt:null, endAt:null, readyAt:null, paused:0, hints:{}, open:{}, wrong:0, coolUntil:{}, toggles:{}};}
+function save(){try{localStorage.setItem(KEY, JSON.stringify(S));}catch(e){}}
+function load(){try{const r=localStorage.getItem(KEY); if(r) return JSON.parse(r);}catch(e){} return null;}
+
+const $ = id => document.getElementById(id);
+const fmt = s => {s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), r=s%60; return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");};
+const hintTotal = () => Object.values(S.hints).reduce((a,b)=>a+b,0);
+const LIMIT = 1800;
+const remaining = () => LIMIT - elapsed() - hintTotal()*PENALTY;
+const fmtSigned = s => (s<0?"−":"") + fmt(Math.abs(s<0?Math.floor(s):Math.ceil(s)));
+const elapsed = () => { if(!S.startAt) return 0; const now = S.endAt || S.readyAt || Date.now(); return (now - S.startAt - (S.paused||0))/1000; };
+
+function parseNum(s){
+  s = String(s).replace(/[−–]/g,"-").replace(/[^0-9.\/\-]/g,"");
+  if(!s) return NaN;
+  if(s.includes("/")){const [a,b]=s.split("/"); return parseFloat(a)/parseFloat(b);}
+  return parseFloat(s);
+}
+
+function renderCabinets(){
+  const g = $("grid"); g.innerHTML = "";
+  const cur = LOCKS.findIndex(L=>!S.open[L.id]);
+  LOCKS.forEach((L,k)=>{
+    const open = !!S.open[L.id];
+    const c = document.createElement("article");
+    if(!open && (!S.startAt || k!==cur)){
+      const why = !S.startAt ? (k===0 ? "Start the clock to unseal this cabinet." : "Sealed until the team starts.")
+                             : `Sealed until ${LOCKS[k-1].name.replace("The ","the ")}'s cabinet is open.`;
+      c.className="cab sealed"; c.id="cab-"+L.id;
+      c.innerHTML=`<div class="stripe"></div><div class="cab-head"><div class="who-row">${face(L.id,"idle")}<h2>${L.name}</h2></div><span class="pill">SEALED</span></div>
+        <div class="cab-body"><div class="skill">${L.title}</div><div class="sealmsg">${why}</div></div>`;
+      g.appendChild(c); return;
+    }
+    c.className = "cab" + (open ? " open" : ""); c.id = "cab-"+L.id;
+    const used = S.hints[L.id]||0;
+    let fields = L.fields.map((F,i)=>{
+      const fid = `${L.id}-f${i}`;
+      if(F.type==="num") return `<div class="field" id="row-${fid}"><label for="${fid}">${F.label}</label><input type="text" inputmode="decimal" id="${fid}" ${open?"disabled":""} value="${open?fmtAns(F.ans):""}"></div>`;
+      const opts = F.type==="sign" ? [["+","+"],["-","−"]] : [["up","∪ up"],["down","∩ down"]];
+      const cur = open ? F.ans : (S.toggles[fid]||"");
+      return `<div class="field" id="row-${fid}"><span class="lbl" id="lbl-${fid}">${F.label}</span><div class="tog" role="group" aria-labelledby="lbl-${fid}" id="${fid}">${opts.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${cur===v}" ${open?"disabled":""}>${t}</button>`).join("")}</div></div>`;
+    }).join("");
+    const hintsHtml = L.hints.slice(0,used).map((h,i)=>`<div class="hint"><b>Hint ${i+1}.</b> ${h}</div>`).join("");
+    c.innerHTML = `<div class="stripe"></div>
+      <div class="cab-head"><div class="who-row">${face(L.id, moodOf(L))}<h2>${L.name}</h2></div><span class="pill">${open?"OPEN · "+L.frag:"LOCKED"}</span></div>
+      <div class="cab-body">
+        <div class="skill">${L.title} · ${L.skill}</div>
+        <p class="prob" style="font-style:italic">“${L.claim}”</p>
+        <p class="prob">${L.prob}</p>
+        <div class="fn">${L.fn}</div>
+        ${L.notes||""}
+        <div class="fields">${fields}</div>
+        ${hintsHtml}
+        ${open ? `<div class="dsp"><b class="kicker" style="color:var(--signal)">Field dispatch</b><br>${L.dispatch}</div><div class="verdict ${L.verdict}">${L.vlabel}</div><p class="prob">${L.vtext}</p><div class="sol"><h3>Worked solution</h3>${L.sol}<div style="display:flex;align-items:center;gap:10px"><span class="status">Override letter</span><span class="frag">${L.frag}</span></div></div>` :
+        `<div class="actions">
+           <button class="primary" id="sub-${L.id}">Try the lock</button>
+           <button id="hint-${L.id}" ${used>=L.hints.length?"disabled":""}>${used>=L.hints.length?"No hints left":"Take hint "+(used+1)+" (+2 min)"}</button>
+         </div>
+         <div class="msg" id="msg-${L.id}" aria-live="polite"></div>`}
+      </div>`;
+    g.appendChild(c);
+    if(!open){
+      c.querySelectorAll(".tog").forEach(t=>t.addEventListener("click",e=>{
+        const b=e.target.closest("button"); if(!b) return;
+        t.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b));
+        S.toggles[t.id]=b.dataset.v; save();
+      }));
+      $("sub-"+L.id).addEventListener("click",()=>tryLock(L));
+      $("hint-"+L.id).addEventListener("click",()=>takeHint(L));
+    }
+  });
+  gate();
+}
+function fmtAns(a){return Math.abs(a-5/6)<1e-9 ? "5/6" : String(a);}
+
+function gate(){
+  const started = !!S.startAt;
+  LOCKS.forEach(L=>{
+    if(S.open[L.id]) return;
+    const sb=$("sub-"+L.id), hb=$("hint-"+L.id);
+    if(sb) sb.disabled = !started || coolLeft(L.id)>0;
+    if(hb && !started) hb.disabled = true;
+  });
+  $("startBtn").disabled = started;
+  $("team").disabled = started;
+  $("startStatus").textContent = started ? `Team ${S.team||"(unnamed)"} is on the clock.` : "The cabinets stay locked until your team starts.";
+}
+function coolLeft(id){return Math.max(0, ((S.coolUntil[id]||0) - Date.now())/1000);}
+
+function tryLock(L){
+  if(coolLeft(L.id)>0) return;
+  let right=0;
+  L.fields.forEach((F,i)=>{
+    const fid=`${L.id}-f${i}`, row=$("row-"+fid);
+    let ok;
+    if(F.type==="num"){ const v=parseNum($(fid).value); ok = !isNaN(v) && Math.abs(v-F.ans)<=0.01; }
+    else { ok = (S.toggles[fid]||"")===F.ans; }
+    row.classList.remove("right","wrong");
+    if(ok) right++;
+  });
+  const msg=$("msg-"+L.id);
+  if(right===L.fields.length){
+    S.open[L.id]=true; save(); renderCabinets(); renderCode(); renderDoor(); renderBoard();
+    const c=$("cab-"+L.id); c.classList.add("just-opened");
+    showDispatch(L);
+    const nxt = LOCKS.find(x=>!S.open[x.id]);
+    const target = nxt ? $("cab-"+nxt.id) : $("door");
+    const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setTimeout(()=>target && target.scrollIntoView({behavior: calm?"auto":"smooth", block:"start"}), 1200);
+    return;
+  }
+  S.wrong++; const wait = 10;
+  S.coolUntil[L.id]=Date.now()+wait*1000; save();
+  msg.className="msg bad";
+  msg.textContent = `${right} of ${L.fields.length} readings correct. Lock resets in ${wait}s.`;
+  renderReadouts(); gate();
+}
+function takeHint(L){
+  const used=S.hints[L.id]||0; if(used>=L.hints.length || !S.startAt) return;
+  S.hints[L.id]=used+1; save();
+  const vals = {};
+  L.fields.forEach((F,i)=>{const fid=`${L.id}-f${i}`; if(F.type==="num") vals[fid]=$(fid).value;});
+  renderCabinets();
+  Object.entries(vals).forEach(([k,v])=>{ if($(k)) $(k).value=v; });
+  renderReadouts();
+}
+let dispTimer=null;
+function showDispatch(L){
+  const d=$("dispatch"); d.innerHTML=`<b>Field dispatch · ${L.name}</b>${L.dispatch}`;
+  d.classList.add("show"); clearTimeout(dispTimer); dispTimer=setTimeout(()=>d.classList.remove("show"),7000);
+}
+// Valley sites, seeded so every team sees the same map. Infection spreads downstream from the glacier.
+const cxAt = y => 150+Math.sin(y/32)*38;
+const coastY = x => 184+4*Math.sin(x/19)+2*Math.sin(x/7);
+const SITES=(()=>{let seed=291;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const out=[];
+  for(let i=0;i<90;i++){const u=rnd(); const y=36+u*142; const w=10+y*0.22; const x=cxAt(y)+(rnd()*2-1)*w; out.push({x,y,u});}
+  return out.sort((a,b)=>a.y-b.y);})();
+function infectedFrac(){
+  if(!S.startAt) return 0;
+  const t = elapsed() + hintTotal()*PENALTY;           // seconds of outbreak time
+  return 1/(1+Math.exp(-0.0039*(t-900)));             // logistic: about 3% at the start, half at 15 min
+}
+function elev(x,y){
+  const d=Math.abs(x-cxAt(y)), down=y/200;
+  const base=200+2600*Math.pow(1-down,1.4);
+  const ridge=2000*(1-Math.exp(-Math.pow(d/55,2)))*(0.55+0.45*(1-down));
+  const n=(130*Math.sin(x/9+y/13)+90*Math.sin(x/17-y/7)+55*Math.sin((x+y)/5.3))*(0.35+d/140);
+  return base+ridge+n-160*Math.exp(-Math.pow(d/9,2));
+}
+const STOPS=[[0,[33,64,46]],[700,[38,71,47]],[1300,[50,80,58]],[1900,[72,84,70]],[2500,[92,98,92]],[3000,[150,165,168]],[3500,[214,226,229]]];
+function tint(e){
+  for(let i=1;i<STOPS.length;i++){ if(e<=STOPS[i][0]){const [e0,c0]=STOPS[i-1],[e1,c1]=STOPS[i]; const t=Math.max(0,(e-e0)/(e1-e0)); return c0.map((v,j)=>v+(c1[j]-v)*t);} }
+  return STOPS[STOPS.length-1][1];
+}
+let MAPBASE=null;
+function mapBase(){
+  if(MAPBASE) return MAPBASE;
+  const C=4, W=300, H=200, nx=W/C, ny=H/C;
+  const E=[]; for(let j=0;j<=ny;j++){E.push([]); for(let i=0;i<=nx;i++) E[j].push(elev(i*C,j*C));}
+  let cells="";
+  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+    const x=i*C+C/2, y=j*C+C/2;
+    if(y>coastY(x)) continue;
+    const e=(E[j][i]+E[j][i+1]+E[j+1][i]+E[j+1][i+1])/4;
+    const gx=(E[j][i+1]+E[j+1][i+1]-E[j][i]-E[j+1][i])/2, gy=(E[j+1][i]+E[j+1][i+1]-E[j][i]-E[j][i+1])/2;
+    const shade=Math.min(1.35,Math.max(.55,1+(gx+gy)*0.0021));   // light from the northwest
+    const c=tint(e).map(v=>Math.round(Math.min(255,v*shade)));
+    cells+=`<rect x="${i*C}" y="${j*C}" width="${C+.4}" height="${C+.4}" fill="rgb(${c})"/>`;
+  }
+  // contours by marching squares
+  let cont="";
+  for(let lev=400;lev<=3400;lev+=300){
+    const major = lev%1200===0; let d="";
+    for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+      if(j*C>coastY(i*C)) continue;
+      const v=[E[j][i],E[j][i+1],E[j+1][i+1],E[j+1][i]], P=[[i*C,j*C],[i*C+C,j*C],[i*C+C,j*C+C],[i*C,j*C+C]], pts=[];
+      for(let k=0;k<4;k++){const a=v[k],b=v[(k+1)%4]; if((a-lev)*(b-lev)<0){const t=(lev-a)/(b-a); pts.push([P[k][0]+(P[(k+1)%4][0]-P[k][0])*t, P[k][1]+(P[(k+1)%4][1]-P[k][1])*t]);}}
+      for(let k=0;k+1<pts.length;k+=2) d+=`M${pts[k][0].toFixed(1)} ${pts[k][1].toFixed(1)}L${pts[k+1][0].toFixed(1)} ${pts[k+1][1].toFixed(1)}`;
+    }
+    cont+=`<path d="${d}" stroke="rgba(10,20,16,${major?.45:.25})" stroke-width="${major?.8:.45}" fill="none"/>`;
+  }
+  // sea
+  let coast=`M0 200 L0 ${coastY(0).toFixed(1)}`; for(let x=0;x<=300;x+=5) coast+=` L${x} ${coastY(x).toFixed(1)}`; coast+=" L300 200 Z";
+  // river, widening downstream
+  let river=""; let prev=[cxAt(30),30];
+  for(let y=34;y<=coastY(cxAt(190))+2;y+=4){const p=[cxAt(y),y]; river+=`<path d="M${prev[0].toFixed(1)} ${prev[1]}L${p[0].toFixed(1)} ${p[1]}" stroke="#5aa6bf" stroke-width="${(0.8+y/200*3.4).toFixed(2)}" stroke-linecap="round"/>`; prev=p;}
+  const trib=(x0,y0,y1,bend)=>{const x1=cxAt(y1); return `<path d="M${x0} ${y0} Q${(x0+x1)/2+bend} ${(y0+y1)/2-6} ${x1.toFixed(1)} ${y1}" stroke="#5aa6bf" stroke-width=".9" fill="none" opacity=".85"/>`;};
+  const gx0=cxAt(32);
+  const glacier=`<path d="M96 0 L204 0 C196 12 180 22 ${(gx0+9).toFixed(1)} 34 Q${gx0.toFixed(1)} 39 ${(gx0-9).toFixed(1)} 34 C120 22 104 12 96 0 Z" fill="#e3edf0" stroke="#b7c9ce" stroke-width=".6"/>
+    <path d="M118 8 l10 3 M135 6 l9 4 M160 5 l-8 5 M178 8 l-9 4 M140 18 l8 3 M158 17 l-7 4 M150 27 l5 2" stroke="#a9bfc6" stroke-width=".7" fill="none"/>`;
+  const sx=cxAt(112)+20, sy=112;
+  MAPBASE=`<defs><filter id="soft" x="0" y="0" width="1" height="1"><feGaussianBlur stdDeviation="1.6"/></filter><clipPath id="mapclip"><rect width="300" height="200"/></clipPath></defs><g clip-path="url(#mapclip)"><g filter="url(#soft)">${cells}</g></g>${cont}
+    <path d="${coast}" fill="#1d4a5c"/><path d="${coast}" fill="none" stroke="#7fb9cc" stroke-width=".6" opacity=".6"/>
+    ${trib(48,62,92,6)}${trib(258,96,128,-6)}${trib(70,140,160,4)}${river}${glacier}
+    <rect x="${sx-3}" y="${sy-3}" width="6" height="6" fill="#f2a541" stroke="#1a1205" stroke-width=".8"/>
+    <text x="${sx+6}" y="${sy+3}" fill="#f2f2ea" font-size="7" font-family="IBM Plex Mono" font-weight="600" paint-order="stroke" stroke="#0e1a1f" stroke-width="2">STATION 291</text>
+    <text x="208" y="14" fill="#f2f2ea" font-size="7" font-family="IBM Plex Mono" paint-order="stroke" stroke="#0e1a1f" stroke-width="2">GLACIER</text>
+    <text x="232" y="196" fill="#cfe3ea" font-size="7" font-family="IBM Plex Mono" letter-spacing="1">COAST</text>
+    <g transform="translate(14,14)"><path d="M0 8 L4 -4 L8 8 L4 5 Z" fill="#f2f2ea"/><text x="1.5" y="17" fill="#f2f2ea" font-size="7" font-family="IBM Plex Mono">N</text></g>
+    <g transform="translate(236,176)"><rect x="0" y="0" width="40" height="2.5" fill="#f2f2ea"/><rect x="20" y="0" width="20" height="2.5" fill="#0e1a1f"/><text x="44" y="4" fill="#f2f2ea" font-size="6.5" font-family="IBM Plex Mono" paint-order="stroke" stroke="#0e1a1f" stroke-width="2">2 km</text></g>
+    <g transform="translate(8,176)" font-family="IBM Plex Mono" font-size="6.5" fill="#f2f2ea">
+      <circle cx="4" cy="2" r="2.6" fill="#ff5a4a"/><text x="10" y="4.5" paint-order="stroke" stroke="#0e1a1f" stroke-width="2">infected site</text>
+      <circle cx="4" cy="12" r="2" fill="none" stroke="#f2f2ea"/><text x="10" y="14.5" paint-order="stroke" stroke="#0e1a1f" stroke-width="2">monitoring site</text></g>`;
+  return MAPBASE;
+}
+let lastInf=-1;
+function renderMap(){
+  const f=infectedFrac(), n=Math.round(f*SITES.length);
+  $("mapPct").textContent=Math.round(f*100)+"%";
+  if(n===lastInf && $("map").childNodes.length) return; lastInf=n;
+  const sites=SITES.map((p,i)=> i<n
+    ? `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" fill="url(#halo)"/><circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4" fill="#ff5a4a" stroke="#2a0b07" stroke-width=".6"/>`
+    : `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="1.8" fill="rgba(14,26,31,.35)" stroke="#f2f2ea" stroke-width=".7" opacity=".8"/>`).join("");
+  $("map").innerHTML=`<defs><radialGradient id="halo"><stop offset="0" stop-color="#ff5a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff5a4a" stop-opacity="0"/></radialGradient></defs>${mapBase()}${sites}`;
+}
+function renderCode(){
+  $("code").textContent = LOCKS.map(L=>S.open[L.id]?L.frag:"_").join("");
+}
+function renderReadouts(){
+  const r = remaining();
+  $("clock").textContent = fmtSigned(r);
+  $("clockBox").classList.toggle("over", r<0);
+  $("clockBox").classList.toggle("low", r>=0 && r<300);
+  renderMap();
+  $("hintCount").textContent = hintTotal();
+  $("wrongCount").textContent = S.wrong;
+}
+
+function renderDoor(){
+  const allOpen = LOCKS.every(L=>S.open[L.id]);
+  const door=$("door"); door.classList.toggle("locked", !allOpen);
+  const body=$("doorBody"), m=$("doorMsg");
+  if(!allOpen){
+    body.innerHTML=`<div class="sealmsg">Sealed. The final model appears once all five cabinets are open.</div>`;
+    m.className="msg"; m.textContent=`${Object.keys(S.open).length} of 5 cabinets open.`; return;
+  }
+  body.innerHTML=`
+    <p class="prob">The station has merged every specialist's data into one model of spore load across the valley. The lab has already done the differentiation. Your job is to turn it into a graph. The lead scientist (your instructor or a TA) has to sign off before the lockdown lifts.</p>
+    <div class="fields" style="gap:6px">
+      <div class="fn">f(x) = e<sup>x</sup> / x<sup>2</sup></div>
+      <div class="fn">f′(x) = e<sup>x</sup>(x − 2) / x<sup>3</sup></div>
+      <div class="fn">f″(x) = e<sup>x</sup>(x<sup>2</sup> − 4x + 6) / x<sup>4</sup></div>
+    </div>
+    <ol class="tasks">
+      <li>State the domain, and every x where f, f′ or f″ is zero or undefined.</li>
+      <li>Build a sign chart for f′. Label where f is increasing and decreasing.</li>
+      <li>Build a sign chart for f″. Label where f is concave up and concave down.</li>
+      <li>List every local extremum and inflection point with coordinates. Decide which of your sign changes actually count.</li>
+      <li>Describe the behaviour as x → −∞, as x → ∞, and as x → 0 from each side.</li>
+      <li>Sketch f on paper with all of the above labelled.</li>
+    </ol>
+    <div class="kicker" style="margin-top:6px">Also on paper · one sketch per specialist</div>
+    <p class="prob" style="margin:0">Before sign-off, each specialist sketches their own cabinet's function, labelling everything their cabinet found: extrema, inflection points, asymptotes, holes and intervals.</p>
+    <ol class="tasks">
+      <li><b>Ecologist:</b> f(x) = x<sup>4</sup> − 4x<sup>3</sup>. Mark both critical points and say which one is the extremum.</li>
+      <li><b>Marine Biologist:</b> C(t) = 20t/(t<sup>2</sup> + 4) for t ≥ 0. Mark the peak and the long-run level.</li>
+      <li><b>Wildlife Biologist:</b> R(x) = (x<sup>2</sup> − x − 6)/(x<sup>2</sup> − 9). Mark both asymptotes and the hole as an open circle.</li>
+      <li><b>Hydrologist:</b> T(t) on 0 ≤ t ≤ 24. Mark the daily minimum and maximum.</li>
+      <li><b>Astrobiologist:</b> f(x) = x<sup>4</sup> − 4x<sup>3</sup> again, now marking both inflection points and the concavity on each interval.</li>
+    </ol>
+    ${S.endAt ? "" : !S.readyAt ?
+      `<div class="actions"><button class="primary" id="readyBtn">We're ready for sign-off (pauses the clock)</button></div>` :
+      `<div class="signoff">
+         <div class="kicker" style="color:var(--signal)">Clock paused · for the instructor or TA</div>
+         <p class="prob" style="margin:0">Check all six sketches and both sign charts for the door function. Approve with your code, or send the team back to fix it.</p>
+         <div class="actions">
+           <label for="soCode" class="status">Sign-off code</label>
+           <input type="text" id="soCode" autocomplete="off" style="width:140px">
+           <button class="primary" id="approveBtn">Approve</button>
+           <button id="backBtn">Send back (clock resumes)</button>
+         </div>
+       </div>`}`;
+  if(S.endAt){m.className="msg ok"; m.textContent="Signed off. Override SPORE accepted.";}
+  else if(S.readyAt){m.className="msg"; m.textContent="Raise your hand. The clock is paused until you're checked.";}
+  else {m.className="msg"; m.textContent="Work on paper. Press the button when all six sketches are done.";}
+  const rb=$("readyBtn"); if(rb) rb.addEventListener("click",()=>{S.readyAt=Date.now(); save(); renderDoor();});
+  const bb=$("backBtn"); if(bb) bb.addEventListener("click",()=>{S.paused=(S.paused||0)+(Date.now()-S.readyAt); S.readyAt=null; save(); renderDoor(); const mm=$("doorMsg"); mm.className="msg bad"; mm.textContent="Sent back. Fix what the lead scientist flagged, then request sign-off again.";});
+  const ab=$("approveBtn"); if(ab){
+    const go=()=>{
+      if(coolLeft("door")>0) return;
+      const v=$("soCode").value.trim().toUpperCase();
+      if(djb2(v)===SIGNOFF_HASH){ S.endAt=S.readyAt; save(); renderDoor(); showEscape(); }
+      else { S.coolUntil.door=Date.now()+5000; save(); const mm=$("doorMsg"); mm.className="msg bad"; mm.textContent="That code isn't right. Wait 5 seconds and try again."; }
+    };
+    ab.addEventListener("click",go);
+    $("soCode").addEventListener("keydown",e=>{if(e.key==="Enter") go();});
+  }
+}
+function showEscape(){
+  const raw=elapsed(), pen=hintTotal()*PENALTY;
+  $("escTeam").textContent = "Team " + (S.team||"(unnamed)");
+  const r = LIMIT - raw - pen;
+  $("escTime").textContent = r>=0 ? fmtSigned(r)+" left" : fmt(Math.abs(Math.floor(r)))+" over";
+  $("escDetail").textContent = `Worked ${fmt(raw)} · ${hintTotal()} hint${hintTotal()===1?"":"s"} × 2 min · ${S.wrong} wrong tr${S.wrong===1?"y":"ies"} · valley infected ${Math.round(infectedFrac()*100)}%`;
+  $("escape").classList.add("show");
+  $("escClose").focus();
+}
+
+$("startBtn").addEventListener("click",()=>{
+  S.team=$("team").value.trim(); S.startAt=Date.now(); save(); renderCabinets(); renderReadouts();
+});
+let resetArmed=false;
+$("resetBtn").addEventListener("click",()=>{
+  if(!resetArmed){resetArmed=true; $("resetBtn").textContent="Click again to erase progress"; setTimeout(()=>{resetArmed=false; $("resetBtn").textContent="Reset for a new team";},4000); return;}
+  resetArmed=false; S=fresh(); save(); $("team").value=""; $("resetBtn").textContent="Reset for a new team";
+  $("escape").classList.remove("show"); renderAll();
+});
+$("escClose").addEventListener("click",()=>$("escape").classList.remove("show"));
+
+function renderAll(){ $("team").value=S.team||""; renderBoard(); renderCabinets(); renderCode(); renderReadouts(); renderDoor(); }
+
+setInterval(()=>{
+  renderReadouts();
+  LOCKS.forEach(L=>{
+    if(S.open[L.id]) return;
+    const left=coolLeft(L.id), m=$("msg-"+L.id);
+    if(m && left>0 && m.classList.contains("bad")) m.textContent = m.textContent.replace(/\d+s\./, Math.ceil(left)+"s.");
+    if(m && left<=0 && m.classList.contains("bad") && /resets in/.test(m.textContent)) m.textContent=m.textContent.replace(/Lock resets in \d+s\./,"Lock ready.");
+  });
+  gate();
+},500);
+
+function start(data){
+  const saved = (data && data.startAt!==undefined) ? data : load();
+  if(saved) S = Object.assign(fresh(), saved);
+  renderAll();
+  if(S.endAt) showEscape();
+}
+window.claude?.hot?.snapshot?.(()=>S);
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
