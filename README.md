@@ -4,7 +4,7 @@ Team review games for QSCI 190, 291 and 292 at the University of Washington.
 
 | Course | Game | File |
 | --- | --- | --- |
-| QSCI 190 | Rewild Kestrel Island (Test 3 review) | `games/rewild-kestrel-island.html` |
+| QSCI 190 | Rewild Rottnest Island (Test 3 review) | `games/rewild-rottnest-island.html` |
 | QSCI 291 | Station 291 Outbreak (Test 3 review) | `games/station-291-outbreak.html` |
 | QSCI 292 | Coming soon | |
 
