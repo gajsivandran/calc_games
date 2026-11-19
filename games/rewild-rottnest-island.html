@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rewild Rottnest Island</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: field-log header, then the island map beside the current restoration stage. Single light theme by choice. */
+  --sea:#dcefeb;
+  --paper:#f7fbf9;
+  --ink:#12302c;
+  --muted:#557570;
+  --kelp:#2f7d5b;
+  --sun:#f2b632;
+  --coral:#d9532c;
+  --line:#b9d6cf;
+  --display:"Bricolage Grotesque", "Segoe UI", sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--sea);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 18px 60px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:clamp(2.4rem,6vw,4rem);font-weight:800;line-height:.95;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--kelp)}
+.kicker{font-family:var(--mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lede{max-width:64ch;margin:8px 0 0}
+header{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:end}
+@media (max-width:820px){header{grid-template-columns:1fr}}
+.stats{display:grid;grid-template-columns:repeat(4,auto);background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stat{padding:10px 16px;border-right:1px solid var(--line);min-width:92px}
+.stat:last-child{border-right:0}
+.stat small{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:1.45rem;font-variant-numeric:tabular-nums}
+#healthStat b{color:var(--kelp)}
+@media (max-width:480px){.stats{grid-template-columns:repeat(2,1fr)}.stat{border-bottom:1px solid var(--line)}}
+.bar{height:12px;background:var(--paper);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--kelp),#5fbf8a);transition:width .8s ease}
+.startbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+label.small{font-family:var(--mono);font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+input[type=text]{font-family:var(--mono);font-size:1rem;background:#fff;color:var(--ink);border:1.5px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+input[type=text]:focus-visible,button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+button{font-family:var(--body);font-weight:700;font-size:.95rem;cursor:pointer;border-radius:6px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);padding:8px 14px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.primary{background:var(--kelp);border-color:var(--kelp);color:#fff}
+.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.status{font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+.main{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+.mapcard{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px;position:sticky;top:12px}
+@media (max-width:900px){.mapcard{position:static}}
+.mapcard svg{width:100%;height:auto;display:block;border-radius:8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.85rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legend .done{color:var(--ink);font-weight:700}
+.stages{display:flex;flex-direction:column;gap:14px}
+.stage{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stage-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.stage-head h2{font-size:1.35rem;font-weight:800}
+.num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.08em;padding:3px 9px;border-radius:999px;border:1.5px solid var(--sun);color:#8a6200;background:#fff7dd;white-space:nowrap}
+.stage.done .pill{border-color:var(--kelp);color:var(--kelp);background:#e3f4ea}
+.stage.sealed{opacity:.6}
+.stage.sealed .pill{border-color:var(--line);color:var(--muted);background:transparent}
+.stage.done .stage-head{cursor:pointer}
+.body[hidden]{display:none}
+.body{padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.skill{font-family:var(--mono);font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--kelp)}
+.prob{margin:0;max-width:65ch}
+.fn{font-family:var(--mono);background:#fff;border:1px solid var(--line);border-left:4px solid var(--kelp);border-radius:6px;padding:8px 12px;overflow-x:auto;white-space:pre}
+.fields{display:flex;flex-direction:column;gap:8px}
+.field{display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center}
+.field input{width:100%;text-align:right;font-variant-numeric:tabular-nums}
+.mcq{border:1px solid var(--line);border-radius:8px;padding:8px 10px 10px;margin:0;display:flex;flex-direction:column;gap:6px;background:#fff}
+.mcq legend{font-weight:700;padding:0 4px;max-width:62ch}
+.mcq button{display:flex;gap:10px;align-items:flex-start;text-align:left;font-weight:400;border:1.5px solid var(--line);background:var(--paper)}
+.mcq button span{font-family:var(--mono);font-weight:600;color:var(--kelp);min-width:1.2em}
+.mcq button[aria-pressed=true]{border-color:var(--kelp);background:#e3f4ea;font-weight:700}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.msg{font-family:var(--mono);font-size:.85rem;min-height:1.2em}
+.msg.bad{color:var(--coral)} .msg.ok{color:var(--kelp)}
+.hint{background:#fff7dd;border:1px dashed var(--sun);border-radius:6px;padding:8px 12px;font-size:.95rem}
+.sol{background:#e9f6ef;border:1px solid #9fd1b5;border-radius:8px;padding:10px 14px;font-size:.95rem}
+.sol h3{font-size:1.05rem;color:var(--kelp);margin-bottom:2px}
+.sol p{margin:.35em 0}
+.event{border-left:4px solid var(--sun);padding:4px 12px;font-size:.98rem}
+.event b{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#8a6200;display:block}
+.sealmsg{font-family:var(--mono);font-size:.85rem;color:var(--muted);padding:14px;text-align:center}
+sup{font-size:.7em}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:min(560px,calc(100% - 28px));background:var(--ink);color:#fff;border-radius:10px;padding:12px 16px;box-shadow:0 12px 30px rgba(18,48,44,.35);display:none;z-index:6}
+.toast.show{display:block}
+.toast b{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;color:var(--sun);display:block;text-transform:uppercase}
+.finale{position:fixed;inset:0;background:rgba(18,48,44,.75);display:none;align-items:center;justify-content:center;padding:18px;z-index:10}
+.finale.show{display:flex}
+.finale .card{background:var(--paper);border-radius:14px;max-width:560px;padding:26px;display:flex;flex-direction:column;gap:10px;border:3px solid var(--kelp)}
+.finale h2{font-size:2.6rem;color:var(--kelp);line-height:1}
+.foot{font-size:.85rem;color:var(--muted);max-width:75ch}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">QSCI 190 · Test 3 review · team play</div>
+      <h1>Rewild <em>Rottnest Island</em></h1>
+      <p class="lede">Rottnest Island (Wadjemup), 19 km off Fremantle, is one of the last strongholds of the quokka. Your team of rangers is restoring its habitat. Every stage is a restoration decision, and the math tells you whether it will work. Get it right and the island changes on the map. Finish all eight to bring the island home.</p>
+    </div>
+    <div class="stats" aria-live="polite">
+      <div class="stat" id="healthStat"><small>Restored</small><b id="health">0%</b></div>
+      <div class="stat"><small>Time on island</small><b id="clock">00:00</b></div>
+      <div class="stat"><small>Hints used</small><b id="hintCount">0</b></div>
+      <div class="stat"><small>Wrong tries</small><b id="wrongCount">0</b></div>
+    </div>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+
+  <div class="startbar">
+    <label class="small" for="team">Team name</label>
+    <input type="text" id="team" placeholder="e.g. The Quokka Squad" maxlength="40">
+    <button class="primary" id="startBtn">Land on the island</button>
+    <span class="status" id="startStatus">Stage 1 opens when your team lands.</span>
+    <button class="ghost" id="resetBtn" style="margin-left:auto">Reset for a new team</button>
+  </div>
+
+  <div class="main">
+    <section class="mapcard" aria-label="Island map">
+      <div class="kicker" style="margin-bottom:6px">Rottnest Island · restoration map</div>
+      <svg id="map" viewBox="12 72 376 186" role="img" aria-label="Map of Rottnest Island showing restored quokka habitat"></svg>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section class="stages" id="stages" aria-label="Restoration stages"></section>
+  </div>
+
+  <p class="foot">Answers are checked within the rounding each box asks for. Fractions like 3/4 are fine. Hints are free, but they are counted on your final report. A wrong try tells you how many boxes are right and pauses that stage for 5 seconds.</p>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="finale" id="finale" role="dialog" aria-modal="true" aria-labelledby="finTitle">
+  <div class="card">
+    <div class="kicker">Restoration report</div>
+    <h2 id="finTitle">Island restored</h2>
+    <div id="finTeam" class="status"></div>
+    <p style="margin:0">Quokkas are spreading from the West End, the seep is running clear, and the tea tree is closing in around them. Rottnest is wild again.</p>
+    <div id="finStats" style="font-family:var(--mono);font-size:1.05rem"></div>
+    <p class="foot" style="color:var(--ink)">Show this to your instructor. Any stage where you needed a hint is a Test 3 study target.</p>
+    <button id="finClose">Back to the island</button>
+  </div>
+</div>
+
+<script>
+const STAGES=[
+ {id:"S1", title:"Bring quokkas back to the West End", skill:"Build an exponential model", layer:"q1", legend:"West End quokkas",
+  event:"The first quokkas are sheltering under the West End heath.",
+  prob:`Rangers moved a small group of quokkas into restored habitat at Rottnest's West End. The first survey counted <b>150 quokkas</b> (t = 0), and the survey ten years later counted <b>450</b>. Model the population as Q(t) = a·b<sup>t</sup>, with t in years.`,
+  fn:`Q(0) = 150     Q(10) = 450`,
+  fields:[
+   {label:"a (quokkas)", ans:150, tol:0.5},
+   {label:"b (4 decimal places)", ans:1.1161, tol:0.0005},
+   {label:"Growth rate (% per year, 2 d.p.)", ans:11.61, tol:0.05}],
+  hints:["a is the value at t = 0. For b, divide: b<sup>10</sup> = 450/150. What is b itself?",
+         "b is the growth factor. The growth rate is b − 1, written as a percentage."],
+  sol:`<p>a = Q(0) = 150 quokkas. Then 150·b<sup>10</sup> = 450, so b<sup>10</sup> = 3 and b = 3<sup>1/10</sup> ≈ 1.1161.</p>
+       <p>b is the growth factor. b − 1 = 0.1161, so the population grows about <b>11.61% per year</b>. Watch out: b<sup>10</sup> = 3 does not mean b = 3/10.</p>`},
+ {id:"S2", title:"Forecast the population", skill:"Doubling time · solve an exponential equation", layer:"q2", legend:"Island-wide quokkas",
+  event:"Quokkas have spread east from the West End across the island.",
+  prob:`Using Q(t) = 150(1.1161)<sup>t</sup>: rangers estimate the restored habitat can support about <b>1,200 quokkas</b>. They need to know how fast the population doubles and when it will reach that limit.`,
+  fn:`Q(t) = 150 · 1.1161^t`,
+  fields:[
+   {label:"Doubling time (years, 2 d.p.)", ans:6.31, tol:0.03},
+   {label:"Years until 1,200 quokkas (2 d.p.)", ans:18.93, tol:0.04}],
+  hints:["Isolate the exponential first: divide both sides by 150. Then take ln of both sides.",
+         "1,200 is 150 × 8, and 8 = 2³. So the answer should be close to three doubling times."],
+  sol:`<p>Doubling: 1.1161<sup>t</sup> = 2, so t = ln 2 / ln 1.1161 ≈ <b>6.31 years</b>.</p>
+       <p>Habitat limit: 150(1.1161)<sup>t</sup> = 1200 → 1.1161<sup>t</sup> = 8 → t = ln 8 / ln 1.1161 ≈ <b>18.93 years</b>.</p>
+       <p>Check: 8 = 2³, so that is three doublings, and 3 × 6.31 = 18.93. ✓ In reality, food and shelter would slow the growth well before then. An exponential model has no brakes.</p>`},
+ {id:"S3", title:"Clear the weed-spray residue", skill:"Half-life", layer:"soil", legend:"Clean soil",
+  event:"The soil tests clean. Native seedlings can go in.",
+  prob:`Clearing invasive weeds left a herbicide residue in the soil. Assume it has a <b>half-life of 160 days</b>. The soil now tests at <b>2.4 mg/kg</b>, and native seedlings that quokkas graze on are safe to plant below <b>0.15 mg/kg</b>.`,
+  fn:`R(t) = 2.4 · (1/2)^(t/160)`,
+  fields:[
+   {label:"Residue after 100 days (mg/kg, 2 d.p.)", ans:1.56, tol:0.01},
+   {label:"Days until it reaches 0.15 mg/kg", ans:640, tol:0.6}],
+  hints:["The exponent is t/160, not t. 100 days is 100/160 = 0.625 half-lives.",
+         "0.15/2.4 = 1/16. How many halvings make 1/16?"],
+  sol:`<p>After 100 days: R(100) = 2.4(1/2)<sup>100/160</sup> = 2.4(0.6484) ≈ <b>1.56 mg/kg</b>.</p>
+       <p>Safe level: (1/2)<sup>t/160</sup> = 0.15/2.4 = 1/16 = (1/2)<sup>4</sup>, so t/160 = 4 and t = <b>640 days</b>. With logs: t = 160·ln(1/16)/ln(1/2) = 640.</p>`},
+ {id:"S4", title:"Unlock the lighthouse data logger", skill:"Log equations · log properties", layer:"lighthouse", legend:"Lighthouse logger",
+  event:"The data logger at the lighthouse is transmitting survey counts again.",
+  prob:`The wildlife data logger at the lighthouse is locked behind two log puzzles. <b>(1)</b> Solve log<sub>3</sub>(x) + log<sub>3</sub>(x − 8) = 2, and reject any extraneous root. <b>(2)</b> Expand log(x<sup>5</sup>·∛y / z) fully, then enter the coefficient in front of each log.`,
+  fn:`log₃(x) + log₃(x − 8) = 2      log( x⁵ · ∛y / z )`,
+  fields:[
+   {label:"(1) The valid solution x =", ans:9, tol:0.01},
+   {label:"(1) The value you rejected", ans:-1, tol:0.01},
+   {label:"(2) Coefficient of log x", ans:5, tol:0.01},
+   {label:"(2) Coefficient of log y", ans:1/3, tol:0.01},
+   {label:"(2) Coefficient of log z", ans:-1, tol:0.01}],
+  hints:["Combine first: log₃(x(x − 8)) = 2 means x(x − 8) = 3². Then factor the quadratic.",
+         "Check each root in the ORIGINAL equation: log of a negative number is undefined. For (2), write ∛y as y^(1/3)."],
+  sol:`<p>(1) log<sub>3</sub>[x(x − 8)] = 2 → x² − 8x = 9 → x² − 8x − 9 = 0 → (x − 9)(x + 1) = 0. x = 9 works: log<sub>3</sub>9 + log<sub>3</sub>1 = 2 + 0 = 2. <b>x = −1 is rejected</b> because log<sub>3</sub>(−1) is undefined.</p>
+       <p>(2) log(x<sup>5</sup>·y<sup>1/3</sup>/z) = <b>5</b> log x + <b>(1/3)</b> log y <b>− 1</b> log z.</p>`},
+ {id:"S5", title:"Fix the freshwater seep", skill:"The pH scale", layer:"seep", legend:"Freshwater seep",
+  event:"The seep is running clear again, and quokkas are drinking at dusk.",
+  prob:`Fresh water is scarce on Rottnest, and the quokkas rely on a small seep in summer. A sample has [H<sup>+</sup>] = <b>2.5 × 10<sup>−5</sup> mol/L</b>. Rangers want the seep at a pH of at least <b>6.3</b>.`,
+  fn:`pH = −log₁₀[H⁺]`,
+  fields:[
+   {label:"Current pH (2 d.p.)", ans:4.60, tol:0.01},
+   {label:"How many times lower must [H⁺] get to reach pH 6.3? (nearest whole number)", ans:50, tol:0.6}],
+  hints:["Type −log(2.5 × 10⁻⁵) into your calculator. Mind the negative sign.",
+         "Each pH unit is a factor of 10 in [H⁺]. The gap is 6.3 − 4.60 = 1.70 units, so the factor is 10^1.70."],
+  sol:`<p>pH = −log<sub>10</sub>(2.5 × 10<sup>−5</sup>) ≈ <b>4.60</b>.</p>
+       <p>The seep must rise 6.3 − 4.60 = 1.70 pH units. Each unit is a tenfold drop in [H<sup>+</sup>], so the factor is 10<sup>1.70</sup> ≈ <b>50</b>. It is not 1.7 times: the scale is logarithmic.</p>`},
+ {id:"S6", title:"Replant the heath and tea tree", skill:"Saturation model · horizontal asymptote", layer:"heath", legend:"Heath and tea tree",
+  event:"Rottnest tea tree and pine are knitting together into shelter for the quokkas.",
+  prob:`Volunteers plant Rottnest tea tree, Rottnest pine and native heath. The percent of the plot covered by vegetation after t months is modeled by C(t) = 80t / (t + 15).`,
+  fn:`C(t) = 80t / (t + 15)`,
+  fields:[
+   {label:"Horizontal asymptote: cover ceiling (%)", ans:80, tol:0.01},
+   {label:"Cover at t = 15 months (%)", ans:40, tol:0.01},
+   {label:"Months until cover reaches 60%", ans:45, tol:0.05}],
+  hints:["For large t, the +15 barely matters, so C(t) ≈ 80t/t. That gives the ceiling.",
+         "Set 80t/(t + 15) = 60 and multiply both sides by (t + 15) before solving."],
+  sol:`<p>The degrees are equal, so the horizontal asymptote is the ratio of leading coefficients: y = 80/1 = <b>80%</b>. It's a ceiling the cover gets closer to but never reaches.</p>
+       <p>C(15) = 1200/30 = <b>40%</b>, exactly half the ceiling. In a model like this, the constant in the denominator is the half-way time.</p>
+       <p>80t = 60(t + 15) → 20t = 900 → t = <b>45 months</b>. Notice the slowdown: 15 months to reach 40%, but 30 more months for the next 20%.</p>`},
+ {id:"S7", title:"Fix the botanist's glitch", skill:"Holes vs. vertical asymptotes", layer:"flowers", legend:"Wildflowers",
+  event:"The seed-mix model works now. Spring wildflowers are out across the south side.",
+  prob:`The botanist's seed-mix spreadsheet keeps crashing on this function. Factor, cancel, and find exactly where it breaks.`,
+  fn:`g(x) = (x² − 25) / (2x² + 7x − 15)`,
+  fields:[
+   {label:"Hole: x =", ans:-5, tol:0.01},
+   {label:"Hole: y (2 d.p.)", ans:10/13, tol:0.01},
+   {label:"Vertical asymptote: x =", ans:1.5, tol:0.01},
+   {label:"Horizontal asymptote: y =", ans:0.5, tol:0.01}],
+  hints:["Numerator: difference of squares. Denominator: look for (2x − ?)(x + ?).",
+         "The factor that cancels gives the hole. Plug its x into the simplified function to get the hole's height."],
+  sol:`<p>g(x) = (x − 5)(x + 5) / [(2x − 3)(x + 5)] = (x − 5)/(2x − 3), for x ≠ −5.</p>
+       <p>(x + 5) cancels → <b>hole at x = −5</b>, height (−5 − 5)/(2(−5) − 3) = −10/−13 = 10/13 ≈ <b>0.77</b>.</p>
+       <p>(2x − 3) remains → <b>vertical asymptote x = 3/2</b>. Equal degrees, leading coefficients 1 and 2 → <b>horizontal asymptote y = 1/2</b>.</p>`},
+ {id:"S8", title:"Fence the seedling plot", skill:"Radians · arc length", layer:"fence", legend:"Seedling fence",
+  event:"The fence is closed. The seedlings can grow without being grazed down.",
+  prob:`Quokkas love eating young seedlings, so rangers fence the new planting until it establishes. The fence runs along a circular arc of radius <b>1,400 m</b>, spanning a central angle of <b>135°</b>. A volunteer walks the finished fence to inspect it at <b>1.1 m/s</b>.`,
+  fn:`s = rθ   (θ in radians)`,
+  fields:[
+   {label:"135° in radians: θ = ___ π (enter the number in front of π)", ans:0.75, tol:0.001},
+   {label:"Fence length (m, nearest metre)", ans:3299, tol:1.5},
+   {label:"Inspection walk (minutes, 1 d.p.)", ans:50.0, tol:0.15}],
+  hints:["Degrees to radians: multiply by π/180. Simplify 135/180.",
+         "s = rθ only works with θ in radians. Time = distance ÷ speed gives seconds; divide by 60 for minutes."],
+  sol:`<p>θ = 135 × π/180 = <b>3π/4</b> rad.</p>
+       <p>s = 1400 × 3π/4 = 1050π ≈ <b>3,299 m</b>.</p>
+       <p>Time = 3299 ÷ 1.1 ≈ 2999 s ≈ <b>50.0 minutes</b>. Using 135 instead of 3π/4 in s = rθ gives a fence 189 km long, longer than a return drive from Perth to Mandurah: a sign something went wrong.</p>`}
+];
+
+const MCQ={"S1": [{"q": "What does b = 1.1161 tell the rangers?", "o": ["The population gains about 1.12 quokkas per year.", "The population grows by about 11.6% each year.", "The population is 111.6% larger after 10 years.", "The population grows by 1.1161 quokkas per decade."], "a": 1, "why": "b is a growth factor: each year's count is 1.1161 times the last, an 11.6% increase. It is not a number of quokkas added."}, {"q": "In this model, what does a = 150 represent?", "o": ["The population when counting began.", "The number of quokkas born each year.", "The most quokkas the habitat can support.", "The population after one doubling."], "a": 0, "why": "a is P(0), the starting value. An exponential model has no ceiling built in."}], "S2": [{"q": "The doubling time is about 6.3 years. A ranger counts 600 quokkas. About how long until there are 1,200?", "o": ["About 6.3 years.", "About 12.6 years.", "It depends on how long ago the population started.", "About 3.2 years."], "a": 0, "why": "Exponential growth doubles over the same time from any starting size, so 600 to 1,200 takes one doubling time."}, {"q": "Why must you divide by 150 before taking ln of both sides?", "o": ["ln only works on numbers smaller than 150.", "Dividing turns the answer into a whole number.", "It does not matter: both orders give the same answer.", "The exponent belongs only to b, so ln(150·bᵗ) is not t·ln(150b)."], "a": 3, "why": "Only b is raised to the power t. Isolating bᵗ first lets the power rule pull t down cleanly."}], "S3": [{"q": "After 160 days half the residue is gone. What fraction of the original remains after 320 days?", "o": ["1/4", "None of it", "1/3", "1/8"], "a": 0, "why": "320 days is two half-lives: ½ × ½ = ¼. Half-lives multiply; they do not add up to 'all gone'."}, {"q": "According to the model, does the residue ever reach exactly zero?", "o": ["Yes, after 640 days.", "Yes, after 1,280 days.", "No. It halves every 160 days but never reaches zero.", "No. It levels off at 0.15 mg/kg."], "a": 2, "why": "(½)^(t/160) is always positive. The model gets as close to zero as you like but never arrives, and 0.15 is just the safety line, not a floor."}], "S4": [{"q": "Why is x = −1 rejected?", "o": ["Negative answers are never allowed in algebra.", "It does not satisfy x² − 8x − 9 = 0.", "It makes log₃(x) and log₃(x − 8) undefined.", "With base 3, x has to be a multiple of 3."], "a": 2, "why": "−1 does solve the quadratic, but logs are only defined for positive inputs, so it fails in the original equation."}, {"q": "A student writes log(x⁵·∛y / z) = log(x⁵) · log(∛y) ÷ log(z). What is wrong?", "o": ["Nothing; that is the product and quotient rule.", "The log of a product is a sum and the log of a quotient is a difference.", "It should use ln, not log.", "∛y should become 3 log y."], "a": 1, "why": "Logs turn multiplication into addition and division into subtraction, not into multiplying and dividing logs."}], "S5": [{"q": "Seep A has pH 5 and Seep B has pH 7. Which statement is true?", "o": ["Seep A is 2 times more acidic.", "Seep B is 100 times more acidic.", "Seep A is 20 times more acidic.", "Seep A is 100 times more acidic."], "a": 3, "why": "Lower pH means more acidic, and two pH units is 10² = 100 times the hydrogen ion concentration."}, {"q": "As treatment raises the seep's pH, what happens to [H⁺]?", "o": ["It decreases.", "It increases.", "It stays the same.", "It becomes negative."], "a": 0, "why": "pH = −log[H⁺]. The minus sign means a higher pH comes from a smaller hydrogen ion concentration."}], "S6": [{"q": "What does the horizontal asymptote y = 80 mean for the planting?", "o": ["The plot reaches 80% cover after 80 months.", "Cover approaches 80% but never reaches it.", "Cover peaks at 80% and then declines.", "Volunteers planted 80 seedlings."], "a": 1, "why": "A horizontal asymptote is a ceiling the model approaches as t grows. C(t) < 80 for every t."}, {"q": "Why does cover take 15 months to reach 40% but 30 more months to gain the next 20%?", "o": ["Volunteers stopped planting.", "The growth is linear.", "Cover grows more slowly as it gets closer to its ceiling.", "The model has an error after 15 months."], "a": 2, "why": "That is what saturation means: each gain gets harder as cover approaches 80%."}], "S7": [{"q": "What does the hole at x = −5 mean for the graph?", "o": ["The graph shoots to infinity at x = −5.", "One single point is missing, and nearby values are finite.", "The graph crosses the x-axis at x = −5.", "The function is undefined for every x below −5."], "a": 1, "why": "A cancelled factor removes one point. Values near x = −5 sit close to 10/13; nothing blows up."}, {"q": "As x gets close to 3/2, what do the values of g(x) do?", "o": ["Approach 10/13.", "Approach 1/2.", "Equal zero.", "Grow without bound."], "a": 3, "why": "(2x − 3) does not cancel, so the denominator goes to zero while the numerator does not: a vertical asymptote."}], "S8": [{"q": "Why must θ be in radians in s = rθ?", "o": ["A radian is defined so that arc length = radius × angle.", "Radians are always smaller numbers than degrees.", "Calculators only work in radians.", "It is not necessary; degrees work too."], "a": 0, "why": "One radian is the angle whose arc equals the radius. In degrees you would need an extra factor of π/180."}, {"q": "If the fence's radius doubled but the angle stayed 135°, the fence length would...", "o": ["stay the same.", "quadruple.", "double.", "increase by 1,400 m."], "a": 2, "why": "s = rθ is proportional to r, so doubling r doubles s."}]};
+STAGES.forEach(st=>(MCQ[st.id]||[]).forEach(m=>st.fields.push({type:"mc",label:m.q,opts:m.o,ans:m.a,why:m.why})));
+const KEY="rottnest-v1";
+let S=fresh();
+function fresh(){return {team:"",startAt:null,endAt:null,done:{},hints:{},wrong:0,cool:{},mc:{}};}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
+const $=id=>document.getElementById(id);
+const fmt=s=>{s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");};
+const elapsed=()=>S.startAt?((S.endAt||Date.now())-S.startAt)/1000:0;
+const nDone=()=>STAGES.filter(st=>S.done[st.id]).length;
+const hintTotal=()=>Object.values(S.hints).reduce((a,b)=>a+b,0);
+const coolLeft=id=>Math.max(0,((S.cool[id]||0)-Date.now())/1000);
+function parseNum(s){
+  s=String(s).replace(/[−–]/g,"-").replace(/π|pi/gi,"").replace(/,/g,"").replace(/[^0-9.\/\-]/g,"");
+  if(!s) return NaN;
+  if(s.includes("/")){const [a,b]=s.split("/");return parseFloat(a)/parseFloat(b);}
+  return parseFloat(s);
+}
+
+function renderStages(){
+  const box=$("stages"); box.innerHTML="";
+  const cur=STAGES.findIndex(st=>!S.done[st.id]);
+  STAGES.forEach((st,k)=>{
+    const done=!!S.done[st.id];
+    const el=document.createElement("article"); el.id="st-"+st.id;
+    const head=`<div class="stage-head"><div><div class="num">Stage ${k+1} of 8</div><h2>${st.title}</h2></div><span class="pill">${done?"RESTORED":(S.startAt&&k===cur?"IN PROGRESS":"LOCKED")}</span></div>`;
+    if(!done && (!S.startAt || k!==cur)){
+      el.className="stage sealed";
+      el.innerHTML=head+`<div class="sealmsg">${!S.startAt?"Land on the island to begin.":"Finish stage "+k+" to unlock this one."}</div>`;
+      box.appendChild(el); return;
+    }
+    if(done){
+      el.className="stage done";
+      el.innerHTML=head+`<div class="body" id="body-${st.id}" ${k===cur-1||cur===-1&&k===7?"":"hidden"}>
+        <div class="event"><b>Field report</b>${st.event}</div>
+        <div class="sol"><h3>Worked solution</h3>${st.sol}
+          ${st.fields.filter(f=>f.type==="mc").map(f=>`<p><b>${f.label}</b><br>${"ABCD"[f.ans]}. ${f.opts[f.ans]} ${f.why}</p>`).join("")}</div></div>`;
+      el.querySelector(".stage-head").addEventListener("click",()=>{const b=$("body-"+st.id); b.hidden=!b.hidden;});
+      box.appendChild(el); return;
+    }
+    const used=S.hints[st.id]||0;
+    el.className="stage";
+    el.innerHTML=head+`<div class="body">
+      <div class="skill">${st.skill}</div>
+      <p class="prob">${st.prob}</p>
+      <div class="fn">${st.fn}</div>
+      <div class="fields">${st.fields.map((f,i)=>f.type==="mc"?"":`<div class="field"><label for="${st.id}-f${i}">${f.label}</label><input type="text" inputmode="decimal" id="${st.id}-f${i}" autocomplete="off"></div>`).join("")}</div>
+      <div class="kicker" style="color:var(--kelp)">What does it mean?</div>
+      ${st.fields.map((f,i)=>f.type!=="mc"?"":`<fieldset class="mcq" id="${st.id}-f${i}"><legend>${f.label}</legend>${f.opts.map((o,j)=>`<button type="button" data-j="${j}" aria-pressed="${(S.mc[st.id+"-f"+i])===j}"><span>${"ABCD"[j]}</span>${o}</button>`).join("")}</fieldset>`).join("")}
+      ${st.hints.slice(0,used).map((h,i)=>`<div class="hint"><b>Hint ${i+1}.</b> ${h}</div>`).join("")}
+      <div class="actions">
+        <button class="primary" id="go-${st.id}">Check our answers</button>
+        <button id="hint-${st.id}" ${used>=st.hints.length?"disabled":""}>${used>=st.hints.length?"No more hints":"Show hint "+(used+1)}</button>
+      </div>
+      <div class="msg" id="msg-${st.id}" aria-live="polite"></div></div>`;
+    box.appendChild(el);
+    $("go-"+st.id).addEventListener("click",()=>check(st));
+    el.querySelectorAll(".mcq").forEach(fs=>fs.addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return;
+      fs.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b)); S.mc[fs.id]=+b.dataset.j; save();}));
+    $("hint-"+st.id).addEventListener("click",()=>{
+      const vals=st.fields.map((f,i)=>f.type==="mc"?null:$(`${st.id}-f${i}`).value);
+      S.hints[st.id]=used+1; save(); renderStages(); renderStats();
+      vals.forEach((v,i)=>{if(v!==null) $(`${st.id}-f${i}`).value=v;});
+    });
+    el.querySelectorAll("input").forEach(inp=>inp.addEventListener("keydown",e=>{if(e.key==="Enter")check(st);}));
+  });
+  $("startBtn").disabled=!!S.startAt; $("team").disabled=!!S.startAt;
+  $("startStatus").textContent=S.startAt?`Team ${S.team||"(unnamed)"} is on the island.`:"Stage 1 opens when your team lands.";
+}
+function check(st){
+  if(coolLeft(st.id)>0) return;
+  let right=0;
+  st.fields.forEach((f,i)=>{const fid=`${st.id}-f${i}`;
+    if(f.type==="mc"){ if(S.mc[fid]===f.ans) right++; return; }
+    const v=parseNum($(fid).value); if(!isNaN(v)&&Math.abs(v-f.ans)<=f.tol) right++;});
+  const m=$("msg-"+st.id);
+  if(right===st.fields.length){
+    S.done[st.id]=true;
+    if(nDone()===STAGES.length) S.endAt=Date.now();
+    save(); renderAll(); toast(st);
+    const nxt=STAGES.find(x=>!S.done[x.id]);
+    const calm=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(nxt) setTimeout(()=>$("st-"+nxt.id).scrollIntoView({behavior:calm?"auto":"smooth",block:"start"}),900);
+    if(S.endAt) setTimeout(showFinale,1600);
+    return;
+  }
+  S.wrong++; S.cool[st.id]=Date.now()+5000; save(); renderStats();
+  m.className="msg bad"; m.textContent=`${right} of ${st.fields.length} correct. Try again in 5 seconds.`;
+  $("go-"+st.id).disabled=true;
+  setTimeout(()=>{const b=$("go-"+st.id); if(b) b.disabled=false; if(m.textContent.includes("5 seconds")) m.textContent=`${right} of ${st.fields.length} correct. Ready to try again.`;},5000);
+}
+let tt=null;
+function toast(st){const t=$("toast"); t.innerHTML=`<b>Field report</b>${st.event}`; t.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("show"),6500);}
+function renderStats(){
+  const pct=Math.round(nDone()/STAGES.length*100);
+  $("health").textContent=pct+"%"; $("barFill").style.width=pct+"%";
+  $("clock").textContent=fmt(elapsed()); $("hintCount").textContent=hintTotal(); $("wrongCount").textContent=S.wrong;
+}
+function showFinale(){
+  $("finTeam").textContent="Team "+(S.team||"(unnamed)");
+  $("finStats").innerHTML=`Time on island ${fmt(elapsed())}<br>Hints used ${hintTotal()} · Wrong tries ${S.wrong}`;
+  $("finale").classList.add("show"); $("finClose").focus();
+}
+
+/* ---------- island map ---------- */
+function rng(seed){return()=>(seed=(seed*16807)%2147483647)/2147483647;}
+// Rottnest is long east to west, narrow at the West End, with salt lakes in the east-centre and Thomson Bay on the east.
+const ISLAND=(()=>{const r=rng(41), top=[], bot=[];
+  for(let i=0;i<=60;i++){const u=i/60, x=28+u*350;
+    const taper=0.32+0.68*Math.pow(u,0.55), body=Math.sqrt(Math.max(0,Math.sin(Math.PI*u)));
+    const h=72*body*taper;
+    const nt=6*Math.sin(u*23+1)+4*Math.sin(u*41)+3*(r()-.5), nb=5*Math.sin(u*19+2)+4*Math.sin(u*37+1)+3*(r()-.5);
+    let yt=150-h+nt, yb=158+h*0.85+nb;
+    if(u>0.86&&u<0.97){const k=Math.sin((u-0.86)/0.11*Math.PI); yb-=22*k;} // Thomson Bay
+    top.push([x,yt]); bot.push([x,yb]);}
+  return top.concat(bot.reverse());})();
+const islandPath="M"+ISLAND.map(p=>p.map(v=>v.toFixed(1)).join(" ")).join(" L")+" Z";
+const LAKES=[[262,150,22,11],[300,140,16,9],[296,170,13,7],[236,168,10,6],[324,156,9,6]];
+const SEEP=[176,170], LIGHT=[222,124], PLOT=[118,150];
+function inIsland(x,y){let c=false;for(let i=0,j=ISLAND.length-1;i<ISLAND.length;j=i++){const[xi,yi]=ISLAND[i],[xj,yj]=ISLAND[j];if(((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c;}return c;}
+const inLake=(x,y)=>LAKES.some(([cx,cy,rx,ry])=>((x-cx)/(rx+4))**2+((y-cy)/(ry+4))**2<1);
+const clearOf=(x,y)=>!inLake(x,y)&&Math.hypot(x-SEEP[0],y-SEEP[1])>12&&Math.hypot(x-LIGHT[0],y-LIGHT[1])>12;
+function scatter(seed,n,box,test){const r=rng(seed),out=[];let g=0;while(out.length<n&&g<8000){g++;const x=box[0]+r()*(box[2]-box[0]),y=box[1]+r()*(box[3]-box[1]);if(inIsland(x,y)&&clearOf(x,y)&&(!test||test(x,y)))out.push([x,y,r()]);}return out;}
+const SHRUBS=scatter(11,80,[40,80,370,230]);
+const FLOWERS=scatter(9,50,[60,155,360,235],(x,y)=>y>158);
+const Q1=scatter(5,9,[34,120,120,190]), Q2=scatter(6,30,[40,90,350,220]);
+function quokka([x,y]){return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><ellipse rx="4.2" ry="3.2" fill="#8a6440"/><circle cx="3.6" cy="-2.6" r="2.3" fill="#9a7450"/><circle cx="3" cy="-4.6" r="1" fill="#7a5530"/><circle cx="4.4" cy="-2.8" r=".45" fill="#1a1205"/></g>`;}
+function renderMap(){
+  const d=S.done, L=[];
+  L.push(`<defs><radialGradient id="sea" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#9fe0e6"/><stop offset="1" stop-color="#3f9db5"/></radialGradient>
+    <pattern id="waves" width="24" height="10" patternUnits="userSpaceOnUse"><path d="M0 5 q6 -4 12 0 t12 0" stroke="#ffffff" stroke-opacity=".3" fill="none"/></pattern></defs>`);
+  L.push(`<rect width="400" height="300" fill="url(#sea)"/><rect width="400" height="300" fill="url(#waves)"/>`);
+  L.push(`<path d="${islandPath}" fill="#f4e6c0" stroke="#efdca8" stroke-width="9" stroke-linejoin="round"/>`);
+  L.push(`<path d="${islandPath}" fill="${d.S3?"#a9c78c":"#c2b28f"}" style="transition:fill 1s"/>`);
+  if(!d.S3) L.push(`<g opacity=".5">${scatter(3,46,[40,90,370,225]).map(([x,y])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#7d6a52"/>`).join("")}</g>`);
+  L.push(LAKES.map(([cx,cy,rx,ry],i)=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${i%2?"#e9a9b8":"#9fc9cf"}" stroke="#ffffff" stroke-opacity=".7"/>`).join(""));
+  // seep
+  L.push(`<circle cx="${SEEP[0]}" cy="${SEEP[1]}" r="6.5" fill="${d.S5?"#3f9fbf":"#9b9a6a"}" stroke="#fff" stroke-opacity=".7" style="transition:fill 1s"/>`);
+  if(d.S6) L.push(SHRUBS.map(([x,y,u])=>u>.6?`<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><path d="M0 -8 L4 1 L-4 1 Z" fill="#2f6b45"/><rect x="-.6" y="1" width="1.2" height="2.5" fill="#5a3d22"/></g>`:`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(3+u*3).toFixed(1)}" fill="${u>.3?"#3c8a5f":"#5aa271"}"/>`).join(""));
+  if(d.S7) L.push(FLOWERS.map(([x,y,u])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.8" fill="${["#f2b632","#e86aa6","#ffffff","#b07de0"][Math.floor(u*4)]}"/>`).join(""));
+  if(d.S8){let p="";for(let a=0;a<=135;a+=5){const t=(200+a)*Math.PI/180;p+=(a?" L":"M")+(PLOT[0]+26*Math.cos(t)).toFixed(1)+" "+(PLOT[1]+26*Math.sin(t)).toFixed(1);}
+    L.push(`<path d="${p}" stroke="#24403c" stroke-width="2.4" fill="none"/><path d="${p}" stroke="#f2b632" stroke-width="1" fill="none" stroke-dasharray="3 3"/>`);}
+  if(d.S1) L.push(Q1.map(quokka).join(""));
+  if(d.S2) L.push(Q2.map(quokka).join(""));
+  if(d.S5) L.push(quokka([SEEP[0]-10,SEEP[1]+2])+quokka([SEEP[0]+9,SEEP[1]-3]));
+  // lighthouse
+  const [lx,ly]=LIGHT;
+  L.push(`<g transform="translate(${lx},${ly})">${d.S4?`<path d="M2 -14 L40 -26 L40 -8 Z" fill="#f2d36b" opacity=".55"/><path d="M-2 -14 L-40 -26 L-40 -8 Z" fill="#f2d36b" opacity=".35"/>`:""}<path d="M-3.5 6 L-2.2 -12 L2.2 -12 L3.5 6 Z" fill="#f7f5ee" stroke="#5b6a6a" stroke-width=".8"/><rect x="-2.8" y="-16" width="5.6" height="4" fill="${d.S4?"#f2b632":"#7d7468"}"/><path d="M-3.4 -16 L0 -19 L3.4 -16 Z" fill="#b5442a"/></g>`);
+  // Thomson Bay settlement and jetty
+  L.push(`<g><rect x="346" y="150" width="6" height="5" fill="#d9532c"/><rect x="354" y="153" width="6" height="5" fill="#f7f5ee" stroke="#9a8f80" stroke-width=".5"/><rect x="341" y="157" width="5" height="4" fill="#4f8fa3"/><line x1="356" y1="166" x2="364" y2="186" stroke="#7a5530" stroke-width="2"/></g>`);
+  L.push(`<path d="M372 200 l10 0 l-2 4 l-8 0 Z" fill="#f7f5ee" stroke="#24403c" stroke-width=".8"/><rect x="375" y="196" width="4" height="4" fill="#24403c"/>`);
+  const lab=(x,y,t)=>`<text x="${x}" y="${y}" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#12302c" paint-order="stroke" stroke="#f7fbf9" stroke-width="2.4">${t}</text>`;
+  L.push(lab(30,126,"WEST END")+lab(244,190,"SALT LAKES")+lab(200,104,"LIGHTHOUSE")+lab(318,214,"THOMSON BAY")+lab(150,186,"SEEP"));
+  L.push(`<g transform="translate(24,226)"><path d="M0 10 L5 -4 L10 10 L5 6 Z" fill="#12302c"/><text x="2" y="20" font-size="8" font-family="JetBrains Mono, monospace" fill="#12302c">N</text></g>`);
+  L.push(`<text x="296" y="252" font-size="7" font-family="JetBrains Mono, monospace" fill="#12302c" paint-order="stroke" stroke="#f7fbf9" stroke-width="2">Mainland 19 km east →</text>`);
+  $("map").innerHTML=L.join("");
+  $("legend").innerHTML=STAGES.map((st,i)=>`<span class="${S.done[st.id]?"done":""}"><i style="background:${S.done[st.id]?"#2f7d5b":"#b9d6cf"}"></i>${i+1}. ${st.legend}</span>`).join("");
+}
+function renderAll(){ $("team").value=S.team||""; renderStages(); renderStats(); renderMap(); }
+
+$("startBtn").addEventListener("click",()=>{S.team=$("team").value.trim(); S.startAt=Date.now(); save(); renderAll();});
+let armed=false;
+$("resetBtn").addEventListener("click",()=>{
+  if(!armed){armed=true;$("resetBtn").textContent="Click again to erase progress";setTimeout(()=>{armed=false;$("resetBtn").textContent="Reset for a new team";},4000);return;}
+  armed=false;S=fresh();save();$("resetBtn").textContent="Reset for a new team";$("finale").classList.remove("show");renderAll();
+});
+$("finClose").addEventListener("click",()=>$("finale").classList.remove("show"));
+setInterval(renderStats,1000);
+function start(data){const saved=(data&&data.startAt!==undefined)?data:load(); if(saved) S=Object.assign(fresh(),saved); renderAll(); if(S.endAt) showFinale();}
+window.claude?.hot?.snapshot?.(()=>S);
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
