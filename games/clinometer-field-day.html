@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinometer Field Day</title>
+<meta name="description" content="Right-triangle trigonometry in the forest: measure trees, find where to stand, and survey from a drone. QSCI 190.">
+<style>
+  :root {
+    --ink: #2B2A28; --muted: #5E5A54; --pine: #1F3A33; --terra: #C2552D; --wheat: #D9A441;
+    --sage: #4E7D5B; --slate: #6B8FA3; --tint: #EEF3EF; --line: #D9DED9; --bg: #FFFFFF; --warn: #A3223A;
+    --head: Cambria, Georgia, "Times New Roman", serif;
+    --body: Calibri, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; }
+  header { background: var(--pine); color: #fff; padding: 18px 16px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  header .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0; }
+  .back { color: #E6EEE9; font-size: 14px; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  h1 { font-family: var(--head); font-size: 28px; margin: 0; }
+  h2 { font-family: var(--head); font-size: 24px; margin: 0 0 6px; }
+  h3 { font-family: var(--head); font-size: 18px; margin: 0 0 8px; }
+  .rounds { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+  .rounds li { padding: 6px 12px; border-radius: 999px; font-size: 14px; background: rgba(255,255,255,.12); color: #E6EEE9; }
+  .rounds li.on { background: var(--wheat); color: var(--pine); font-weight: 700; }
+  .rounds li.done { background: rgba(255,255,255,.28); }
+  main { padding: 22px 0 48px; }
+  .intro { background: var(--tint); border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; }
+  .intro p { margin: 4px 0 0; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+  svg { width: 100%; display: block; }
+  svg text { font-family: var(--body); }
+  button { font: inherit; cursor: pointer; }
+  .btn { border: 0; border-radius: 10px; padding: 11px 18px; font-weight: 700; background: var(--terra); color: #fff; }
+  .btn:hover:not(:disabled) { filter: brightness(1.06); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--pine); border: 1px solid var(--line); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+  .slider { width: 100%; accent-color: var(--terra); }
+  .rowlab { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+  .rowlab b { color: var(--ink); }
+  .reading { font-family: var(--head); font-size: 34px; font-weight: 700; color: var(--terra); line-height: 1.1; }
+  .k { font-size: 13px; color: var(--muted); }
+  .field { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .field input { width: 130px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); font: inherit; }
+  .fb { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: 15px; }
+  .fb.ok { background: #E6F1E8; color: #23472E; }
+  .fb.no { background: #F8E7E9; color: #6E1726; }
+  .fb.tip { background: var(--tint); color: var(--pine); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 14px; color: var(--pine); }
+  .chip[aria-pressed="true"] { background: var(--pine); color: #fff; border-color: var(--pine); }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--sage); color: #fff; font-weight: 700; font-size: 14px; }
+  .badge.off { background: #E7E3DC; color: var(--muted); }
+  .hidden { display: none !important; }
+  .steps { display: flex; gap: 6px; margin: 6px 0 10px; }
+  .steps span { width: 28px; height: 6px; border-radius: 3px; background: #E3E6E2; }
+  .steps span.ok { background: var(--sage); }
+  .steps span.now { background: var(--wheat); }
+  .log { font-size: 14px; color: var(--muted); margin: 8px 0 0; padding-left: 18px; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--wheat); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div><a href="../index.html" class="back">← Calc Games</a><h1>Clinometer Field Day</h1></div>
+    <ol class="rounds" id="tabs" aria-label="Rounds">
+      <li data-r="1">Round 1: measure</li>
+      <li data-r="2">Round 2: where to stand</li>
+      <li data-r="3">Round 3: drone and bank</li>
+    </ol>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===== Round 1 ===== -->
+  <section id="r1">
+    <div class="intro">
+      <h2>Round 1: measure the survey plot</h2>
+      <p>Three trees, no tape measure long enough to climb them. Walk to a spot, take a clinometer reading, and work out each tree's height. Your clinometer is held at eye level, 1.7 m above the ground.</p>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <svg id="scene1" viewBox="0 0 720 400" role="img" aria-label="Side view of a forester and a tree"></svg>
+        <label class="rowlab" for="d1"><span>Close to the tree</span><b>Distance from the trunk: <span id="d1Txt"></span> m</b><span>Far away</span></label>
+        <input class="slider" type="range" id="d1" min="8" max="90" step="1" value="40">
+      </div>
+      <div class="card">
+        <div class="k" id="treeLab"></div>
+        <div class="steps" id="steps1"></div>
+        <div class="k">Clinometer reading (angle of elevation)</div>
+        <div class="reading" id="read1">—</div>
+        <div class="actions"><button class="btn" id="readBtn">Take the reading</button></div>
+        <div id="ask1" class="hidden">
+          <div class="field"><label for="h1">Tree height (m):</label><input id="h1" type="text" inputmode="decimal" autocomplete="off"><button class="btn" id="check1">Check</button></div>
+        </div>
+        <div id="fb1"></div>
+        <div class="actions"><button class="btn hidden" id="next1">Next tree</button></div>
+        <ul class="log" id="log1"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Round 2 ===== -->
+  <section id="r2" class="hidden">
+    <div class="intro">
+      <h2>Round 2: the wobbly clinometer</h2>
+      <p>Real clinometers aren't perfect. Yours can be off by up to 1° either way. A 1° slip turns into a range of possible heights, and how wide that range is depends on where you stand.</p>
+    </div>
+    <div class="card" id="predict2">
+      <h3>Predict first: where should you stand to get the most reliable height?</h3>
+      <div class="chips" id="predChips"></div>
+    </div>
+    <div class="grid hidden" id="play2">
+      <div class="card">
+        <svg id="scene2" viewBox="0 0 720 400" role="img" aria-label="Forester and tree with the range of possible heights shaded on the trunk"></svg>
+        <label class="rowlab" for="d2"><span>Close</span><b>Distance from the trunk: <span id="d2Txt"></span> m</b><span>Far</span></label>
+        <input class="slider" type="range" id="d2" min="5" max="120" step="1" value="12">
+        <svg id="err" viewBox="0 0 720 230" role="img" aria-label="Width of the possible-height range against distance" style="margin-top:12px"></svg>
+        <div class="actions"><button class="btn ghost" id="reveal2">Show the whole curve</button><span id="sweet" class="badge off">Find the narrowest range</span></div>
+      </div>
+      <div class="card">
+        <div class="k">Reading (±1°)</div>
+        <div class="reading" id="read2"></div>
+        <div class="k" style="margin-top:10px">The tree could be anywhere from</div>
+        <div class="reading" id="range2" style="font-size:26px;color:var(--pine)"></div>
+        <div class="k" id="width2"></div>
+        <div id="q2" class="hidden" style="margin-top:14px">
+          <h3>You found the sweet spot. What does the clinometer read there?</h3>
+          <div class="field"><label for="a2">Angle (°):</label><input id="a2" type="text" inputmode="decimal" autocomplete="off"><button class="btn" id="check2">Check</button></div>
+          <div id="fb2"></div>
+        </div>
+        <div class="actions"><button class="btn hidden" id="next2">Go to Round 3</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Round 3 ===== -->
+  <section id="r3" class="hidden">
+    <div class="intro">
+      <h2>Round 3: from the air and on the bank</h2>
+      <p>Two quick jobs. First, a drone looks <b>down</b> at an osprey nest. Then you find the angle of a stream bank that's eroding.</p>
+    </div>
+    <div class="grid">
+      <div class="card"><svg id="scene3" viewBox="0 0 720 400" role="img" aria-label="Survey diagram"></svg></div>
+      <div class="card">
+        <div class="steps" id="steps3"></div>
+        <h3 id="task3Title"></h3>
+        <p id="task3Text" style="margin-top:0"></p>
+        <div class="field"><label for="a3" id="a3Lab"></label><input id="a3" type="text" inputmode="decimal" autocomplete="off"><button class="btn" id="check3">Check</button></div>
+        <div id="fb3"></div>
+        <div class="actions"><button class="btn hidden" id="next3"></button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="done" class="hidden">
+    <div class="intro">
+      <h2>Field day complete</h2>
+      <p>Talk it over with your group before you leave the page.</p>
+    </div>
+    <div class="card">
+      <ul id="summary"></ul>
+      <h3>Discuss</h3>
+      <ul>
+        <li>Why did every tree use tan, and not sin or cos?</li>
+        <li>Why does standing very close or very far make a 1° slip so costly?</li>
+        <li>The drone looked down and the nest "looked up". Why are those two angles equal?</li>
+      </ul>
+      <div class="actions"><button class="btn ghost" id="again">Play again with new trees</button></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const rad = (d) => d * Math.PI / 180, deg = (r) => r * 180 / Math.PI;
+  const EYE = 1.7, S = 5.5, GROUND = 372, TREE_X = 650;
+  const rnd = (a, b, step = 0.1) => Math.round((a + Math.random() * (b - a)) / step) * step;
+  const num = (s) => { const v = parseFloat(String(s).replace(/[−–]/g, "-").replace(/[^0-9.\-]/g, "")); return isFinite(v) ? v : NaN; };
+  const near = (a, b, tol) => Math.abs(a - b) <= tol;
+  const f1 = (v) => v.toFixed(1), f2 = (v) => v.toFixed(2);
+
+  const SPECIES = ["Sitka spruce", "Western hemlock", "Douglas fir", "Western redcedar", "Grand fir"];
+  let st;
+  function fresh() {
+    const sp = [...SPECIES].sort(() => Math.random() - 0.5);
+    st = {
+      round: 1,
+      trees: [0, 1, 2].map((i) => ({ name: sp[i], H: rnd(26, 58) })),
+      ti: 0, taken: false, reading: null, results: [],
+      r2: { H: rnd(34, 52), visited: new Set(), last: null, reveal: false, found: false, pred: null },
+      r3: { A: Math.round(rnd(35, 72, 1)), phi: Math.round(rnd(14, 38, 1)), rise: rnd(1.6, 3.8), run: rnd(5.5, 12, 0.5), step: 0, results: [] },
+    };
+  }
+
+  function tabs() {
+    document.querySelectorAll("#tabs li").forEach((li) => {
+      const r = +li.dataset.r;
+      li.className = r === st.round ? "on" : r < st.round ? "done" : "";
+    });
+    ["r1", "r2", "r3", "done"].forEach((id, i) => $(id).classList.toggle("hidden", (st.round === 4 ? 3 : st.round - 1) !== i));
+  }
+
+  // ---------- drawing ----------
+  function conifer(x, H, color = "#2F5139") {
+    const top = GROUND - H * S, w = Math.max(28, H * 0.9);
+    let s = `<rect x="${x - 4}" y="${GROUND - H * S * 0.25}" width="8" height="${H * S * 0.25}" fill="#6E4A2E"/>`;
+    const tiers = 6;
+    for (let i = 0; i < tiers; i++) {
+      const yb = GROUND - H * S * (0.18 + 0.82 * i / tiers), yt = top + (H * S * 0.82) * (i === tiers - 1 ? 0 : 0) ;
+      const half = w * (1 - i / tiers) * 0.55 + 6;
+      const ytop = i === tiers - 1 ? top : GROUND - H * S * (0.18 + 0.82 * (i + 1.6) / tiers);
+      s += `<path d="M${x - half} ${yb} L${x} ${Math.max(ytop, top)} L${x + half} ${yb} Z" fill="${color}" opacity="${0.85 + i * 0.02}"/>`;
+    }
+    return s;
+  }
+  function person(x) {
+    const eye = GROUND - EYE * S;
+    return `<g stroke="#1F3A33" stroke-width="2.2" stroke-linecap="round"><line x1="${x}" y1="${GROUND}" x2="${x}" y2="${eye + 2}"/></g>
+      <circle cx="${x}" cy="${eye - 1}" r="2.6" fill="#1F3A33"/>
+      <rect x="${x + 2}" y="${eye - 2}" width="6" height="3" fill="#C2552D"/>`;
+  }
+  function groundAndSky(w = 720) {
+    return `<rect x="0" y="0" width="${w}" height="${GROUND}" fill="#F4F8F6"/><rect x="0" y="${GROUND}" width="${w}" height="28" fill="#C9B48F"/><line x1="0" y1="${GROUND}" x2="${w}" y2="${GROUND}" stroke="#8C7A5B" stroke-width="2"/>`;
+  }
+  function arc(cx, cy, r, a0, a1, color) { // angles in degrees, measured counterclockwise from +x (svg y flipped)
+    const p = (a) => `${cx + r * Math.cos(rad(a))} ${cy - r * Math.sin(rad(a))}`;
+    return `<path d="M${p(a0)} A${r} ${r} 0 0 ${a1 > a0 ? 0 : 1} ${p(a1)}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
+  }
+  function scaleBar() {
+    return `<g><line x1="20" y1="392" x2="${20 + 10 * S}" y2="392" stroke="#5E5A54" stroke-width="2"/><text x="${24 + 10 * S}" y="396" font-size="11" fill="#5E5A54">10 m</text></g>`;
+  }
+
+  // ---------- Round 1 ----------
+  function drawR1() {
+    const t = st.trees[st.ti], d = +$("d1").value, px = TREE_X - d * S, eye = GROUND - EYE * S, topY = GROUND - t.H * S;
+    $("d1Txt").textContent = d;
+    let s = groundAndSky() + conifer(TREE_X, t.H) + person(px) + scaleBar();
+    s += `<line x1="${px}" y1="${GROUND + 12}" x2="${TREE_X}" y2="${GROUND + 12}" stroke="#5E5A54" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${(px + TREE_X) / 2}" y="${GROUND + 24}" font-size="12" text-anchor="middle" fill="#5E5A54">${d} m</text>`;
+    if (st.taken) {
+      const th = st.reading;
+      s += `<line x1="${px + 5}" y1="${eye}" x2="${TREE_X}" y2="${eye}" stroke="#1F3A33" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+      s += `<line x1="${px + 5}" y1="${eye}" x2="${TREE_X}" y2="${topY}" stroke="#C2552D" stroke-width="2"/>`;
+      s += arc(px + 5, eye, 34, 0, th, "#C2552D");
+      s += `<text x="${px + 44}" y="${eye - 8}" font-size="14" font-weight="700" fill="#C2552D">${f1(th)}°</text>`;
+      if (t.done) {
+        s += `<line x1="${TREE_X + 22}" y1="${eye}" x2="${TREE_X + 22}" y2="${topY}" stroke="#1F3A33" stroke-width="1.5"/><text x="${TREE_X + 28}" y="${(eye + topY) / 2}" font-size="12" fill="#1F3A33">d·tan θ</text>`;
+        s += `<line x1="${TREE_X + 22}" y1="${GROUND}" x2="${TREE_X + 22}" y2="${eye}" stroke="#C2552D" stroke-width="3"/><text x="${TREE_X + 28}" y="${GROUND - 2}" font-size="12" fill="#C2552D">+1.7 m</text>`;
+      }
+    }
+    s += `<text x="${TREE_X}" y="${Math.max(topY - 8, 14)}" font-size="13" text-anchor="middle" fill="#1F3A33" font-weight="700">${t.name}</text>`;
+    $("scene1").innerHTML = s;
+  }
+  function stepDots(id, n, i, okArr) {
+    $(id).innerHTML = Array.from({ length: n }, (_, k) => `<span class="${okArr[k] ? "ok" : k === i ? "now" : ""}"></span>`).join("");
+  }
+  function resetTree() {
+    st.taken = false; st.reading = null;
+    $("read1").textContent = "—"; $("ask1").classList.add("hidden"); $("fb1").innerHTML = "";
+    $("next1").classList.add("hidden"); $("readBtn").disabled = false; $("d1").disabled = false; $("h1").value = "";
+    const t = st.trees[st.ti];
+    $("treeLab").textContent = `Tree ${st.ti + 1} of 3: ${t.name}`;
+    stepDots("steps1", 3, st.ti, st.trees.map((x) => x.done));
+    drawR1();
+  }
+  $("d1").addEventListener("input", drawR1);
+  $("readBtn").onclick = () => {
+    const t = st.trees[st.ti], d = +$("d1").value;
+    st.taken = true; st.d = d;
+    st.reading = Math.round(deg(Math.atan((t.H - EYE) / d)) * 10) / 10;
+    $("read1").textContent = f1(st.reading) + "°";
+    $("readBtn").disabled = true; $("d1").disabled = true;
+    $("ask1").classList.remove("hidden"); $("h1").focus();
+    drawR1();
+  };
+  function diagnose(ans, d, th) {
+    const T = Math.tan(rad(th));
+    const right = EYE + d * T;
+    const checks = [
+      [d * T, "That's the height above your eyes. The triangle starts at the clinometer, so add the 1.7 m back on."],
+      [EYE + d / T, "Your ratio is upside down. tan θ = opposite ÷ adjacent, so the height above your eyes is d × tan θ."],
+      [d / T, "Your ratio is upside down. tan θ = opposite ÷ adjacent, so the height above your eyes is d × tan θ."],
+      [EYE + d * Math.tan(th), "Check your calculator: it's in radian mode. Switch to degrees and try again."],
+      [d * Math.tan(th), "Check your calculator: it's in radian mode. Switch to degrees and try again."],
+      [EYE + d * Math.sin(rad(th)), "sin uses the hypotenuse, which you don't know. You know the ground distance, so use tan."],
+      [d / Math.cos(rad(th)), "That's the line-of-sight distance to the treetop, not the height."],
+    ];
+    if (near(ans, right, Math.max(0.3, right * 0.01))) return { ok: true, right };
+    for (const [v, msg] of checks) if (isFinite(v) && near(ans, v, Math.max(0.3, Math.abs(v) * 0.01))) return { ok: false, msg, right };
+    return { ok: false, msg: "Not quite. Sketch the triangle: which side do you know, which do you want, and where does the triangle start?", right };
+  }
+  $("check1").onclick = () => {
+    const t = st.trees[st.ti], ans = num($("h1").value);
+    if (!isFinite(ans)) return;
+    const r = diagnose(ans, st.d, st.reading);
+    t.tries = (t.tries || 0) + 1;
+    if (r.ok) {
+      t.done = true; t.d = st.d; t.th = st.reading;
+      $("fb1").innerHTML = `<div class="fb ok"><b>Got it.</b> ${st.d} × tan ${f1(st.reading)}° + 1.7 = ${f1(r.right)} m. The tree's true height is ${f1(t.H)} m.</div>`;
+      $("check1").disabled = true;
+      $("log1").innerHTML += `<li>${t.name}: ${f1(r.right)} m, measured from ${st.d} m at ${f1(st.reading)}°</li>`;
+      $("next1").textContent = st.ti < 2 ? "Next tree" : "Go to Round 2";
+      $("next1").classList.remove("hidden");
+      stepDots("steps1", 3, st.ti, st.trees.map((x) => x.done));
+      drawR1();
+    } else {
+      $("fb1").innerHTML = `<div class="fb no">${r.msg}</div>`;
+      if (t.tries >= 3) $("fb1").innerHTML += `<div class="fb tip">Hint: height = 1.7 + (distance × tan(reading)).</div>`;
+    }
+  };
+  $("h1").addEventListener("keydown", (e) => { if (e.key === "Enter") $("check1").click(); });
+  $("next1").onclick = () => {
+    $("check1").disabled = false;
+    if (st.ti < 2) { st.ti++; resetTree(); }
+    else { st.round = 2; tabs(); startR2(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  };
+
+  // ---------- Round 2 ----------
+  const preds = [["close", "Right next to the trunk"], ["one", "About one tree-height away"], ["far", "As far away as you can"]];
+  function startR2() {
+    $("predict2").classList.remove("hidden"); $("play2").classList.add("hidden");
+    $("predChips").innerHTML = "";
+    preds.forEach(([k, l]) => {
+      const b = document.createElement("button"); b.className = "chip"; b.textContent = l; b.setAttribute("aria-pressed", "false");
+      b.onclick = () => {
+        st.r2.pred = k;
+        $("predChips").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true");
+        setTimeout(() => { $("play2").classList.remove("hidden"); drawR2(); }, 250);
+      };
+      $("predChips").appendChild(b);
+    });
+  }
+  const h2 = () => st.r2.H - EYE;
+  const widthAt = (d) => { const th = Math.atan(h2() / d); return d * (Math.tan(th + rad(1)) - Math.tan(th - rad(1))); };
+  function drawR2() {
+    const d = +$("d2").value, H = st.r2.H, h = h2(), th = deg(Math.atan(h / d));
+    const lo = EYE + d * Math.tan(rad(th - 1)), hi = EYE + d * Math.tan(rad(th + 1)), w = hi - lo;
+    $("d2Txt").textContent = d;
+    const S2 = Math.min(S, 600 / 120);
+    const tx = 690, px = tx - d * S2, G = GROUND, eye = G - EYE * S2;
+    let s = `<rect x="0" y="0" width="720" height="${G}" fill="#F4F8F6"/><rect x="0" y="${G}" width="720" height="28" fill="#C9B48F"/>`;
+    // tree at scale S2
+    const top = G - H * S2;
+    s += `<rect x="${tx - 4}" y="${G - H * S2 * 0.25}" width="8" height="${H * S2 * 0.25}" fill="#6E4A2E"/>`;
+    for (let i = 0; i < 6; i++) { const yb = G - H * S2 * (0.18 + 0.82 * i / 6), half = (H * 0.9) * (1 - i / 6) * 0.55 + 6, yt = i === 5 ? top : G - H * S2 * (0.18 + 0.82 * (i + 1.6) / 6); s += `<path d="M${tx - half} ${yb} L${tx} ${Math.max(yt, top)} L${tx + half} ${yb} Z" fill="#2F5139" opacity=".88"/>`; }
+    const yLo = G - Math.max(0, lo) * S2, yHi = Math.max(4, G - hi * S2);
+    s += `<rect x="${tx - 26}" y="${yHi}" width="52" height="${Math.max(2, yLo - yHi)}" fill="#C2552D" opacity=".28" stroke="#C2552D"/>`;
+    s += `<line x1="${px + 4}" y1="${eye}" x2="${tx}" y2="${G - lo * S2}" stroke="#C2552D" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    s += `<line x1="${px + 4}" y1="${eye}" x2="${tx}" y2="${G - Math.min(hi, 75) * S2}" stroke="#C2552D" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    s += `<g stroke="#1F3A33" stroke-width="2.2"><line x1="${px}" y1="${G}" x2="${px}" y2="${eye + 2}"/></g><circle cx="${px}" cy="${eye - 1}" r="2.6" fill="#1F3A33"/>`;
+    s += `<text x="${tx - 32}" y="${Math.max(yHi - 6, 14)}" font-size="12" text-anchor="end" fill="#C2552D" font-weight="700">possible heights</text>`;
+    $("scene2").innerHTML = s;
+    $("read2").textContent = `${f1(th)}° ± 1°`;
+    $("range2").textContent = `${f1(lo)} to ${hi > 400 ? "400+" : f1(hi)} m`;
+    $("width2").textContent = `A range ${hi > 400 ? "hundreds of" : f2(w)} m wide.`;
+    // trace
+    const k = d;
+    if (st.r2.last === null) st.r2.visited.add(k); else for (let j = Math.min(k, st.r2.last); j <= Math.max(k, st.r2.last); j++) st.r2.visited.add(j);
+    st.r2.last = k;
+    drawErr(d);
+    const best = h;
+    const at = Math.abs(d - best) <= Math.max(1, best * 0.03);
+    if (at && !st.r2.found) { st.r2.found = true; $("q2").classList.remove("hidden"); }
+    $("sweet").className = "badge" + (at ? "" : " off");
+    $("sweet").textContent = at ? `Narrowest range: about ${f2(widthAt(best))} m wide` : "Find the narrowest range";
+  }
+  function drawErr(dNow) {
+    const X0 = 60, X1 = 700, Y0 = 16, Y1 = 186, DMAX = 120, WMAX = 12;
+    const px = (d) => X0 + (d - 5) / (DMAX - 5) * (X1 - X0), py = (w) => Y1 - Math.min(w, WMAX) / WMAX * (Y1 - Y0);
+    let s = "";
+    for (let w = 0; w <= WMAX; w += 3) s += `<line x1="${X0}" x2="${X1}" y1="${py(w)}" y2="${py(w)}" stroke="#ECEEEA"/><text x="${X0 - 8}" y="${py(w) + 4}" font-size="12" text-anchor="end" fill="#5E5A54">${w}</text>`;
+    for (let d = 10; d <= DMAX; d += 10) s += `<text x="${px(d)}" y="${Y1 + 18}" font-size="12" text-anchor="middle" fill="#5E5A54">${d}</text>`;
+    s += `<text x="${(X0 + X1) / 2}" y="${Y1 + 38}" font-size="13" text-anchor="middle" fill="#5E5A54">Distance from the trunk (m)</text>`;
+    s += `<text transform="translate(16 ${(Y0 + Y1) / 2}) rotate(-90)" font-size="13" text-anchor="middle" fill="#5E5A54">Range width (m)</text>`;
+    const path = (ds) => ds.map((d, i) => `${i ? "L" : "M"}${px(d).toFixed(1)} ${py(widthAt(d)).toFixed(1)}`).join(" ");
+    const all = Array.from({ length: 116 }, (_, i) => i + 5);
+    if (st.r2.reveal) s += `<path d="${path(all)}" fill="none" stroke="#C2552D" stroke-opacity=".35" stroke-width="3" stroke-dasharray="6 5"/>`;
+    const pts = all.filter((d) => st.r2.visited.has(d));
+    let run = []; const flush = () => { if (run.length > 1) s += `<path d="${path(run)}" fill="none" stroke="#C2552D" stroke-width="4" stroke-linecap="round"/>`; run = []; };
+    pts.forEach((d, i) => { if (i && d - pts[i - 1] > 1) flush(); run.push(d); }); flush();
+    s += `<circle cx="${px(dNow)}" cy="${py(widthAt(dNow))}" r="7" fill="#fff" stroke="#1F3A33" stroke-width="3"/>`;
+    $("err").innerHTML = s;
+  }
+  $("d2").addEventListener("input", drawR2);
+  $("reveal2").onclick = () => { st.r2.reveal = !st.r2.reveal; $("reveal2").textContent = st.r2.reveal ? "Hide the whole curve" : "Show the whole curve"; drawR2(); };
+  $("check2").onclick = () => {
+    const a = num($("a2").value); if (!isFinite(a)) return;
+    if (near(a, 45, 1.5)) {
+      const pred = { close: "You predicted right next to the trunk.", one: "You predicted about one tree-height away. Spot on.", far: "You predicted as far away as possible." }[st.r2.pred] || "";
+      $("fb2").innerHTML = `<div class="fb ok"><b>45°.</b> At the sweet spot your distance equals the tree's height above your eyes, so the triangle is isosceles. ${pred} Look at the curve, though: the bottom is flat. Anywhere from about two-thirds to one and a half tree heights away is nearly as good. It's standing very close or very far that hurts.</div>`;
+      $("next2").classList.remove("hidden");
+    } else $("fb2").innerHTML = `<div class="fb no">Look at the reading in the box while you're at the narrowest point.</div>`;
+  };
+  $("a2").addEventListener("keydown", (e) => { if (e.key === "Enter") $("check2").click(); });
+  $("next2").onclick = () => { st.round = 3; tabs(); drawR3(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  // ---------- Round 3 ----------
+  function drawR3() {
+    const r = st.r3, step = r.step;
+    stepDots("steps3", 2, step, r.results.map((x) => x));
+    $("fb3").innerHTML = ""; $("a3").value = ""; $("next3").classList.add("hidden"); $("check3").disabled = false;
+    let s = "";
+    if (step === 0) {
+      const dist = r.A / Math.tan(rad(r.phi));
+      const sc = Math.min(560 / dist, 290 / r.A), x0 = 90, yTop = 60, G = yTop + r.A * sc, xN = x0 + dist * sc;
+      s += `<rect x="0" y="0" width="720" height="${G}" fill="#F4F8F6"/><rect x="0" y="${G}" width="720" height="${400 - G}" fill="#C9B48F"/>`;
+      s += `<g transform="translate(${x0} ${yTop})"><rect x="-16" y="-5" width="32" height="10" rx="4" fill="#1F3A33"/><line x1="-22" y1="-9" x2="-8" y2="-9" stroke="#1F3A33" stroke-width="3"/><line x1="8" y1="-9" x2="22" y2="-9" stroke="#1F3A33" stroke-width="3"/></g>`;
+      s += `<line x1="${x0}" y1="${yTop}" x2="${700}" y2="${yTop}" stroke="#1F3A33" stroke-dasharray="5 4"/><text x="690" y="${yTop - 6}" font-size="12" text-anchor="end" fill="#1F3A33">horizontal</text>`;
+      s += `<line x1="${x0}" y1="${yTop}" x2="${xN}" y2="${G}" stroke="#C2552D" stroke-width="2"/>`;
+      s += arc(x0, yTop, 48, 0, -r.phi, "#C2552D") + `<text x="${x0 + 56}" y="${yTop + 20}" font-size="14" font-weight="700" fill="#C2552D">${r.phi}°</text>`;
+      s += `<line x1="${x0 - 30}" y1="${yTop}" x2="${x0 - 30}" y2="${G}" stroke="#5E5A54" stroke-width="1.5"/><text x="${x0 - 36}" y="${(yTop + G) / 2}" font-size="13" text-anchor="end" fill="#5E5A54">${r.A} m</text>`;
+      s += `<ellipse cx="${xN}" cy="${G - 4}" rx="16" ry="6" fill="#8A6A4A"/><text x="${xN}" y="${G + 22}" font-size="12" text-anchor="middle" fill="#1F3A33">nest</text>`;
+      s += `<text x="${(x0 + xN) / 2}" y="${G + 22}" font-size="13" text-anchor="middle" fill="#5E5A54">d = ?</text>`;
+      if (r.results[0]) s += arc(xN, G - 4, 40, 180, 180 - r.phi, "#4E7D5B") + `<text x="${xN - 52}" y="${G - 16}" font-size="13" font-weight="700" text-anchor="end" fill="#4E7D5B">${r.phi}° elevation</text>`;
+      $("task3Title").textContent = "A: the osprey nest";
+      $("task3Text").innerHTML = `A survey drone hovers ${r.A} m above level ground. Its camera sees an osprey nest at an angle of depression of ${r.phi}°. How far away is the nest, measured along the ground?`;
+      $("a3Lab").textContent = "Distance (m):";
+    } else {
+      const sc = Math.min(520 / r.run, 240 / r.rise), x0 = 100, G = 320, x1 = x0 + r.run * sc, yT = G - r.rise * sc;
+      s += `<rect x="0" y="0" width="720" height="400" fill="#F4F8F6"/>`;
+      s += `<path d="M${x0} ${G} L${x1} ${yT} L${x1 + 120} ${yT} L${x1 + 120} 400 L0 400 L0 ${G} Z" fill="#B59A6E"/>`;
+      s += `<path d="M0 ${G} L${x0} ${G} L${x0} 400 L0 400 Z" fill="#7FA7C9" opacity=".8"/><text x="40" y="${G + 30}" font-size="13" fill="#1F3A33">stream</text>`;
+      s += `<line x1="${x0}" y1="${G}" x2="${x1}" y2="${G}" stroke="#1F3A33" stroke-dasharray="5 4"/><line x1="${x1}" y1="${G}" x2="${x1}" y2="${yT}" stroke="#1F3A33" stroke-dasharray="5 4"/>`;
+      s += `<text x="${(x0 + x1) / 2}" y="${G + 20}" font-size="13" text-anchor="middle" fill="#1F3A33">run ${f1(r.run)} m</text><text x="${x1 + 8}" y="${(G + yT) / 2}" font-size="13" fill="#1F3A33">rise ${f1(r.rise)} m</text>`;
+      s += arc(x0, G, 50, 0, deg(Math.atan(r.rise / r.run)), "#C2552D") + `<text x="${x0 + 58}" y="${G - 10}" font-size="14" font-weight="700" fill="#C2552D">θ = ?</text>`;
+      $("task3Title").textContent = "B: the eroding bank";
+      $("task3Text").innerHTML = `A stream bank rises ${f1(r.rise)} m over a horizontal run of ${f1(r.run)} m. What angle does the bank make with the horizontal, in degrees?`;
+      $("a3Lab").textContent = "Angle (°):";
+    }
+    $("scene3").innerHTML = s;
+  }
+  $("check3").onclick = () => {
+    const r = st.r3, ans = num($("a3").value); if (!isFinite(ans)) return;
+    let ok = false, msg = "";
+    if (r.step === 0) {
+      const t = Math.tan(rad(r.phi)), right = r.A / t;
+      if (near(ans, right, Math.max(0.3, right * 0.01))) { ok = true; msg = `<b>${f2(right)} m.</b> tan ${r.phi}° = ${r.A} ÷ d, so d = ${r.A} ÷ tan ${r.phi}°. The depression at the drone equals the elevation at the nest (alternate angles), shown in green.`; }
+      else if (near(ans, r.A * t, Math.max(0.3, r.A * t * 0.01))) msg = "Upside down: that's altitude × tan. Check: a shallow angle should give a long distance, not a short one.";
+      else if (near(ans, r.A / Math.sin(rad(r.phi)), 0.5)) msg = "That's the line-of-sight distance to the nest, not the distance along the ground.";
+      else if (near(ans, r.A / Math.tan(r.phi), 0.5)) msg = "Your calculator is in radian mode. Switch to degrees.";
+      else msg = "Not quite. The angle of depression is measured down from the horizontal. Put the same angle at the nest, then use tan.";
+    } else {
+      const right = deg(Math.atan(r.rise / r.run));
+      if (near(ans, right, 0.15)) { ok = true; msg = `<b>${f2(right)}°.</b> tan θ = ${f1(r.rise)} ÷ ${f1(r.run)}, so θ = arctan(${(r.rise / r.run).toFixed(4)}).`; }
+      else if (near(ans, 90 - right, 0.15)) msg = "That's the angle at the top of the bank. Use rise ÷ run from the corner on the ground.";
+      else if (near(ans, Math.atan(r.rise / r.run), 0.01)) msg = "That answer is in radians. Switch your calculator to degrees.";
+      else msg = "Not quite. You know the opposite (rise) and adjacent (run), so use arctan(rise ÷ run).";
+    }
+    $("fb3").innerHTML = `<div class="fb ${ok ? "ok" : "no"}">${msg}</div>`;
+    if (ok) {
+      r.results[r.step] = true; $("check3").disabled = true;
+      $("next3").textContent = r.step === 0 ? "Next: the bank" : "Finish";
+      $("next3").classList.remove("hidden");
+      if (r.step === 0) { const keep = $("fb3").innerHTML; drawR3(); $("fb3").innerHTML = keep; $("check3").disabled = true; $("next3").textContent = "Next: the bank"; $("next3").classList.remove("hidden"); }
+      stepDots("steps3", 2, r.step, r.results);
+    }
+  };
+  $("a3").addEventListener("keydown", (e) => { if (e.key === "Enter") $("check3").click(); });
+  $("next3").onclick = () => {
+    if (st.r3.step === 0) { st.r3.step = 1; drawR3(); }
+    else { st.round = 4; tabs(); finish(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  };
+
+  function finish() {
+    const tries = st.trees.reduce((s, t) => s + (t.tries || 0), 0);
+    $("summary").innerHTML = st.trees.map((t) => `<li>${t.name}: measured from ${t.d} m at ${f1(t.th)}°</li>`).join("") +
+      `<li>${tries} attempt${tries === 1 ? "" : "s"} across the three trees</li><li>Sweet spot for a wobbly clinometer: a 45° reading</li>`;
+  }
+  $("again").onclick = () => { fresh(); tabs(); $("check1").disabled = false; $("log1").innerHTML = ""; $("q2").classList.add("hidden"); $("next2").classList.add("hidden"); $("fb2").innerHTML = ""; $("a2").value = ""; resetTree(); window.scrollTo({ top: 0 }); };
+
+  fresh(); tabs(); resetTree();
+})();
+</script>
+</body>
+</html>
