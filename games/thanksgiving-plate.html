@@ -82,6 +82,17 @@
   .r3grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; }
   @media (max-width: 820px) { .r3grid { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr 1fr 1fr; } }
   .summary { font-size: 15px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0 4px; }
+  @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
+  .compare .card h3 { margin-bottom: 2px; }
+  .compare .plate-svg { max-width: 230px; margin: 8px auto; }
+  .compare .facts { list-style: none; padding: 0; margin: 8px 0; font-size: 15px; }
+  .compare .facts li { padding: 2px 0; }
+  .over { color: var(--warn); font-weight: 700; }
+  .changes { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 6px; }
+  .changes th, .changes td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  .changes th { background: var(--tint); }
+  .up { color: var(--sage); font-weight: 700; } .down { color: var(--terra); font-weight: 700; }
   .summary li { margin: 2px 0; }
   .focus-ring:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--wheat); outline-offset: 2px; }
 </style>
@@ -142,6 +153,7 @@
         <p class="result" id="objLine"></p>
         <ul class="summary" id="plateSummary"></ul>
         <p id="compareTxt"></p>
+        <div id="compareBox" class="hidden"></div>
         <div class="actions"><button class="btn" id="nextBtn"></button><button class="btn ghost" id="backBtn">Keep editing my plate</button></div>
       </div>
     </div>
@@ -285,17 +297,22 @@
   function plateBase() {
     return `<circle cx="150" cy="154" r="140" fill="#000" opacity=".08"/><circle cx="150" cy="150" r="140" fill="#fff" stroke="#D8D2C6" stroke-width="3"/><circle cx="150" cy="150" r="116" fill="#F7F4EE"/>`;
   }
-  function renderPlate() {
-    let a = -Math.PI / 2, s = plateBase();
+  function plateMarkup(plate) {
+    let a = -Math.PI / 2, s = plateBase(), any = false;
     FOODS.forEach((f) => {
-      const c = st.plate[f.id] || 0;
+      const c = plate[f.id] || 0;
       if (!c) return;
+      any = true;
       const b = a + (c * f.space / PLATE) * 2 * Math.PI;
       s += wedge(150, 150, 110, a, b, f.color, `${f.name} × ${c}`);
       a = b;
     });
-    if (!used()) s += `<text x="150" y="156" text-anchor="middle" font-size="16" fill="#8A857C">Empty plate</text>`;
-    $("plateSvg").innerHTML = s;
+    if (!any) s += `<text x="150" y="156" text-anchor="middle" font-size="16" fill="#8A857C">Empty plate</text>`;
+    return s;
+  }
+  const costOf = (plate) => FOODS.reduce((t, f) => t + (plate[f.id] || 0) * f.price, 0);
+  function renderPlate() {
+    $("plateSvg").innerHTML = plateMarkup(st.plate);
     $("spaceTxt").textContent = `${used()} of ${PLATE}`;
     $("spaceBar").style.width = (100 * used() / PLATE) + "%";
     $("budgetMeter").classList.toggle("hidden", !budgetOn());
@@ -332,6 +349,7 @@
     d.classList.remove("hidden");
     st.objective = null; st.otherText = "";
     $("objResult").classList.add("hidden");
+    $("compareBox").classList.add("hidden");
     $("otherWrap").classList.add("hidden");
     $("otherTxt").value = "";
     if (st.round === 2) {
@@ -374,6 +392,7 @@
     const snap = snapshot();
     $("objResult").classList.remove("hidden");
     $("objLine").innerHTML = `Your objective: <b>${escapeHtml(snap.objective)}</b>`;
+    $("plateSummary").classList.toggle("hidden", st.round === 2);
     $("plateSummary").innerHTML = FOODS.filter((f) => snap.plate[f.id]).map((f) => `<li>${f.name} × ${snap.plate[f.id]}</li>`).join("") +
       `<li><b>${snap.dishes}</b> different dish${snap.dishes === 1 ? "" : "es"}, ${snap.used} of ${PLATE} spaces${st.round === 2 ? `, ${money(snap.spent)} spent` : ""}</li>`;
     if (st.round === 1) {
@@ -383,8 +402,34 @@
       const r1 = st.r1;
       const more = snap.dishes > r1.dishes ? "more variety" : snap.dishes < r1.dishes ? "fewer, more focused dishes" : "the same number of dishes";
       $("compareTxt").innerHTML = `In Round 1 you chose <b>${escapeHtml(r1.objective)}</b> with ${r1.dishes} dishes. With a budget you went for <b>${more}</b>.`;
+      renderCompare(r1, snap);
       $("nextBtn").textContent = "Go to Round 3";
     }
+  }
+  function renderCompare(r1, r2) {
+    const r1cost = costOf(r1.plate), over = r1cost - BUDGET;
+    const side = (title, sub, snap, extra) => `
+      <div class="card">
+        <h3>${title}</h3><div class="small">${sub}</div>
+        <svg class="plate-svg" viewBox="0 0 300 300" role="img" aria-label="${title} plate">${plateMarkup(snap.plate)}</svg>
+        <ul class="facts">
+          <li>Objective: <b>${escapeHtml(snap.objective)}</b></li>
+          <li>${snap.dishes} different dish${snap.dishes === 1 ? "" : "es"}, ${snap.used} of ${PLATE} spaces</li>
+          ${extra}
+        </ul>
+        <ul class="legend">${FOODS.filter((f) => snap.plate[f.id]).map((f) => `<li><span class="swatch" style="background:${f.color}"></span>${f.name} × ${snap.plate[f.id]}</li>`).join("")}</ul>
+      </div>`;
+    const r1extra = `<li>Would have cost ${money(r1cost)}${over > 1e-9 ? ` <span class="over">(${money(over)} over budget)</span>` : " (within budget)"}</li>`;
+    const r2extra = `<li>Cost ${money(r2.spent)} of ${money(BUDGET)}</li>`;
+    const rows = FOODS.map((f) => [f, r1.plate[f.id] || 0, r2.plate[f.id] || 0]).filter(([, a, b]) => a !== b);
+    const table = rows.length ? `<table class="changes"><thead><tr><th>Dish</th><th>Round 1</th><th>Round 2</th><th>Change</th></tr></thead><tbody>${rows.map(([f, a, b]) =>
+      `<tr><td>${f.name}</td><td>${a}</td><td>${b}</td><td class="${b > a ? "up" : "down"}">${b > a ? "+" : "−"}${Math.abs(b - a)}</td></tr>`).join("")}</tbody></table>` : `<p>Your two plates are identical. The budget didn't change anything for you.</p>`;
+    $("compareBox").innerHTML = `
+      <h2 style="margin-top:14px">Your two plates, side by side</h2>
+      <div class="compare">${side("Round 1", "Limit: the plate", r1, r1extra)}${side("Round 2", `Limits: the plate and ${money(BUDGET)}`, r2, r2extra)}</div>
+      <h3 style="margin-top:12px">What the budget changed</h3>${table}
+      <p class="small">What did you give up first when the money got tight? It might say something about what your objective valued least.</p>`;
+    $("compareBox").classList.remove("hidden");
   }
   $("otherTxt").addEventListener("input", () => { if (st.objective === "Something else") showResult(); });
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
